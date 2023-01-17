@@ -116,7 +116,8 @@ def decod(X, y, meta, times):
     # score
     out = list()
     for label, m in meta.groupby("label"):
-        Rs = correlate(y[m.index, None], preds[m.index])
+        Rs = correlate(y[m.index, None], preds[m.index]) # (327, 1)
+        # print("y[m.index, None] ", y[m.index, None].shape)
         for t, r in zip(times, Rs):
             out.append(dict(score=r, time=t, label=label, n=len(m.index)))
     return pd.DataFrame(out)
@@ -147,12 +148,12 @@ ph_info = pd.read_csv("phoneme_info.csv")
 subjects = pd.read_csv(PATHS.bids / "participants.tsv", sep="\t")
 subjects = subjects.participant_id.apply(lambda x: x.split("-")[1]).values
 
-nb_max_ses = 2
+nb_max_ses = 1
 def _get_epochs(subject):
     all_epochs = list()
     for session in range(nb_max_ses):
         print("session ", session)
-        for task in range(4):
+        for task in range(1):
             print("task ", task)
             print(".", end="")
             bids_path = mne_bids.BIDSPath(

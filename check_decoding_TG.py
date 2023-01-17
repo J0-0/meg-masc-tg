@@ -2,6 +2,7 @@ import mne
 import mne_bids
 import numpy as np
 import pandas as pd
+import sklearn
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 from sklearn.model_selection import KFold, cross_val_predict
 from sklearn.pipeline import make_pipeline
@@ -100,46 +101,57 @@ def decod(X, y, meta, times, word_phoneme):
     meta = meta.reset_index()
     if word_phoneme == "words":
         y = scale(y[:, None])[:, 0]
-        # print("y is ", len(set(y[:1000])), len(y), set(y[:1000]), y)
-        # words: len(set(y[:1000])), len(y) -> 229 668, y.shape (668,) / and phonemes: 2 1794
-        if len(set(y[:1000])) > 2: # what is this for ?
+        if len(set(y[:1000])) > 2:
             y = y > np.nanmedian(y)
-        #else: # ADDED TO TRY IT OUT
-            # y = y > np.nanmedian(y) # ADDED TO TRY IT OUT
     print(word_phoneme, " y is ", y)
 
-    # define data
-    model = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis())
-    model_TG = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis())
-    cv = KFold(5, shuffle=True, random_state=0)
+    #### define data
+
+def cross_val_score(X, y):  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
+    model = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis()) # potentiellement changer LDA en quelque chose SVM etc.
 
     # fit predict
     n, nchans, ntimes = X.shape # what is n and ntimes ?
     # 27 English speakers who listened to 2 sessions of 1h of naturalistic stories
     # words: n, nchans, ntimes = 668 208 41 (n: nb of words ?)
     # phonemes: n, nchans, ntimes = 1794 208 41
-    print("n, nchans, ntimes =", n, nchans, ntimes)
-    preds = np.zeros((n, ntimes))
-    preds_TG = np.zeros((n, ntimes, ntimes))
-    scores_TG = []
-    for t1 in trange(ntimes):
-        preds[:, t1] = cross_val_predict(
-           model, X[:, :, t1], y, cv=cv, method="predict_proba" # why predict_proba and not predict ?
-        )[:, 1]
-        if y[0] == False or y[0] == True:
-            y_scal = [int(bool_val == True) for bool_val in y]
+    scores = np.zeros((ntimes, ntimes))
+    cv = KFold(n_splits=5, shuffle=True, random_state = 0)
+
+    for split, (train, test) in enumerate(cv.split(X)):
+        for t1 in trange(ntimes):
+            model.fit(X[train, :, t1], y[train]) # n_trial -> chaque phoneme/word
+            # is n every phoneme/word in chronological order ?
+            # is it better to mix the training and testing data for this dataset or not ?
+            # yes for homogeneisation but careful for independance too
+            # -> cv qui pred des segments d'une dizaine de secondes pour ne pas avoir d'élements trop proches
+            for t2 in trange(ntimes):
+                y_preds = model.predict_proba(X[test, :, t2])[:, 1]
+                #score = correlate(y[test].astype(float), y_preds)
+                score = sklearn.metrics.roc_auc_score(y[test], y_preds) # best for classification
+                scores[split, t1, t2] = score
+    return scores.mean(0)
+    # on s'attend à ce que le score de decodabilité augmente une fois le mot/phonème entendu
+
+    """
+    for label, m in meta.groupby("label"):
+        print("m.index ", m.index)
+        m_reduced = [el for el in m.index if el in range(test[0], n)]
+        # print("m.index ", m.index, "m_reduced ", m_reduced)
+        #Rs_TG_ = correlate(y[m_reduced, None], preds_TG[m_reduced, t1, t2])  # (327, 1)
+        Rs_TG_ = correlate(y[m.index, None], preds_TG[m.index, t1, t2])
+        # remove the m.indexes that were trained on ?
+        if type(Rs_TG_) is int:
+            Rs_TG = Rs_TG_
         else:
-            y_scal = y
-            print(y[0], type(y[0]), "scal")
-        model_TG.fit(X[:, :, t1], y_scal)
-        for t2 in trange(ntimes):
-            preds_TG[:, t1, t2] = model_TG.predict(X[:, :, t2]) ####  #[:, 1]
-        for label, m in meta.groupby("label"):
-            Rs_TG = correlate(y[m.index, None], preds_TG[m.index, t1])
-            for t2, r_TG in zip(times, Rs_TG) :
-                scores_TG.append(dict(score=r_TG, time_1=t1, time_2=t2, label=label, n=len(m.index))) ## t1 et t2 !
+            Rs_TG = Rs_TG_[0]
+        # print("Rs_TG ", Rs_TG_, Rs_TG)
+        scores_TG.append(dict(score=Rs_TG, time_1=t1, time_2=t2, label=label, n=len(m.index))) 
+        
+        # modulariser donc mettre labels etc dans boucle
+    """
     df_scores_TG = pd.DataFrame(scores_TG)
-    print("df_scores_TG", df_scores_TG)
+
     # score
     out = list()
     for label, m in meta.groupby("label"):
@@ -155,10 +167,10 @@ def decod(X, y, meta, times, word_phoneme):
         for t1 in trange(ntimes):
             for t2, t2_int in zip(times, t2_int_list):
                 df_scores_TG_reduced_t1 = df_scores_TG_reduced[df_scores_TG_reduced["time_1"] == t1]
-                df_scores_TG_reduced_t2 = df_scores_TG_reduced_t1[df_scores_TG_reduced_t1["time_2"] == t2]
+                df_scores_TG_reduced_t2 = df_scores_TG_reduced_t1[df_scores_TG_reduced_t1["time_2"] == t2_int]
                 eg_matrix[t1, t2_int] = df_scores_TG_reduced_t2.iloc[:]["score"].astype(float)
         fig, ax = plt.subplots(1, 1)
-        im = ax.imshow(eg_matrix, interpolation='lanczos', origin='lower', cmap='RdBu_r', vmin=0., vmax=0.5)
+        im = ax.imshow(eg_matrix, interpolation='lanczos', origin='lower', cmap='RdBu_r', vmin=0., vmax=1.)
         ax.set_xlabel('Testing Time (s)')
         ax.set_ylabel('Training Time (s)')
         ax.set_title('Temporal generalization')
@@ -167,7 +179,7 @@ def decod(X, y, meta, times, word_phoneme):
         plt.xticks([i for n,i in enumerate(t2_int_list) if n%5 == 0], [i for n,i in enumerate(times) if n%5 == 0])
         plt.yticks([i for n,i in enumerate(t2_int_list) if n%5 == 0], [i for n,i in enumerate(times) if n%5 == 0])
         cbar = plt.colorbar(im, ax=ax)
-        cbar.set_label('AUC')
+        cbar.set_label('R score')
         time_inst = time.time()
         plt.savefig("/Users/Josephine/Desktop/tg_figures/figure_plot_" + word_phoneme + "_" + label + "_" + str(time_inst)[-4:]+".png")
         report_TG.add_figure(fig, label, tags= word_phoneme)
@@ -187,7 +199,6 @@ def correlate(X, Y):
     SY2 = (Y**2).sum(0) ** 0.5
     SXY = (X * Y).sum(0)
     if (SX2 * SY2).any() != 0:
-        print("denom ", SX2 * SY2)
         result = SXY / (SX2 * SY2)
     else:
         result = 0
@@ -205,12 +216,13 @@ ph_info = pd.read_csv("phoneme_info.csv") # phonation: "v", "uv", what do these 
 subjects = pd.read_csv(PATHS.bids / "participants.tsv", sep="\t")
 subjects = subjects.participant_id.apply(lambda x: x.split("-")[1]).values
 
-nb_max_ses = 2
+nb_min_ses = 0
 nb_min_task = 0
+nb_max_ses = 1
 nb_max_task = 1
 def _get_epochs(subject):
     all_epochs = list()
-    for session in range(nb_max_ses):
+    for session in range(nb_min_ses, nb_max_ses):
         print("session ", session)
         for task in range(nb_min_task, nb_max_task):
             print("task ", task)
