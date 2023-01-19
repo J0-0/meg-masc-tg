@@ -214,7 +214,7 @@ def _decod_one_subject(subject):
     results = decod(X, y, words.metadata, words.times)
     results["subject"] = subject
     results["contrast"] = "wordfreq"
-    print("results")
+    print("results", results)
     fig_decod = plot(results)
     print("fig_decod")
 

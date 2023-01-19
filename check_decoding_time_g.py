@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import sklearn
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.linear_model import LogisticRegression, RidgeClassifierCV
 from sklearn.model_selection import KFold, cross_val_predict
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler, scale
@@ -84,16 +85,16 @@ def segment(raw) :
         event_repeated="drop",
     )
 
-    # threshold # what is this threshold for ?
+    # threshold
     th = np.percentile(np.abs(epochs._data), 95)
     epochs._data[:] = np.clip(epochs._data, -th, th)
-    epochs.apply_baseline()
+    epochs.apply_baseline((-0.2, 0.0))
     th = np.percentile(np.abs(epochs._data), 95)
     epochs._data[:] = np.clip(epochs._data, -th, th)
-    epochs.apply_baseline()
+    epochs.apply_baseline((-0.2, 0.0))
     return epochs
 
-def correlate(X, Y) :
+def correlate(X, Y):
     if X.ndim == 1 :
         X = X[:, None]
     if Y.ndim == 1 :
@@ -111,15 +112,15 @@ def correlate(X, Y) :
 
 def plot(result):
     fig, ax = plt.subplots(1, figsize=[6, 6])
-    sns.lineplot(x="time", y="score", data=result, hue="label", ax=ax)
+    sns.lineplot(x="time", y="AUC", data=result, hue="label", ax=ax)
     ax.axhline(0, color="k")
     return fig
 
 def _get_epochs(subject):
     all_epochs = list()
-    for session in range(nb_min_ses, nb_max_ses) :
+    for session in range(nb_min_ses, nb_max_ses):
         print("session ", session)
-        for task in range(nb_min_task, nb_max_task) :
+        for task in range(nb_min_task, nb_max_task):
             print("task ", task)
             print(".", end="")
             bids_path = mne_bids.BIDSPath(
@@ -162,46 +163,66 @@ def _get_epochs(subject):
     epochs.metadata["label"] = label
     return epochs
 
-def decod_specific_label(times, m, label, y_all, X_all, word_phoneme):
+def decod_specific_label(times, m, label, y_all, X_all, word_phoneme, tg_bool=False):
     m = m.reset_index()
     y = y_all[m.index]
     X = X_all[m.index]
-    score_matrix = decod(X, y, word_phoneme)
-    fig_each_ses_task_subject = plot_TG_matrix(times, label, word_phoneme, score_matrix)
-    report_TG.add_figure(fig_each_ses_task_subject, label, tags=word_phoneme)
+    score_matrix = decod(X, y, word_phoneme, label, times)
+    if tg_bool == True :
+        fig_each_ses_task_subject = plot_TG_matrix(times, label, word_phoneme, score_matrix)
+        report_TG.add_figure(fig_each_ses_task_subject, label, tags=word_phoneme)
 
-def decod(X, y, word_phoneme):
+def decod(X, y, word_phoneme, label, times):
     assert len(X) == len(y)
     if word_phoneme == "words":
         y = scale(y[:, None])[:, 0]
         if len(set(y[:1000])) > 2:
             y = y > np.nanmedian(y)
-    score_mean = cross_val_score(X, y)  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
+    score_mean = cross_val_score(X, y, label, word_phoneme, times)  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
     return score_mean
 
-def cross_val_score(X,y):  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
+def cross_val_score(X,y, label, word_phoneme, times, score_t1_bool = True, tg_bool = False):  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
     model = make_pipeline(StandardScaler(),
-                          LinearDiscriminantAnalysis())  # potentiellement changer LDA en quelque chose SVM etc.
+                          LinearDiscriminantAnalysis())
+    #model = make_pipeline(StandardScaler(), LogisticRegression())
+
     # fit predict
     n, nchans, ntimes = X.shape  # what is n and ntimes ?
     # 27 English speakers who listened to 2 sessions of 1h of naturalistic stories
     # words: n, nchans, ntimes = 668 208 41 (n: nb of trials: words or phonemes)
     # phonemes: n, nchans, ntimes = 1794 208 41
-    nsplits = 5
+    nsplits = 15
+    score_mean = 0.5
     cv = KFold(n_splits=nsplits, shuffle=True, random_state=0)
     scores = np.zeros((nsplits, ntimes, ntimes))
+    score_t1_cv = np.zeros((nsplits, ntimes))
     for split, (train, test) in enumerate(cv.split(X)):
         for t1 in trange(ntimes):
             model.fit(X[train, :, t1], y[train].astype(float))  # n_trial -> chaque phoneme/word
             # is it better to mix the training and testing data for this dataset or not ?
             # yes for homogeneisation but careful for independance too
             # solut°: cv qui prend des segments d'une dizaine de secondes pour ne pas avoir d'élements trop proches
-            for t2 in trange(ntimes) :
-                y_preds = model.predict_proba(X[test, :, t2])[:, 1]
-                score = correlate(y[test].astype(float), y_preds)
-                #score = sklearn.metrics.roc_auc_score(y[test].astype(float), y_preds)  # best for classification (not for regression)
-                scores[split, t1, t2] = score
-                score_mean = scores.mean(0)
+            if score_t1_bool == True:
+                y_preds_t1 = model.predict_proba(X[test, :, t1])[:, 1]
+                score_t1 = sklearn.metrics.roc_auc_score(y[test].astype(float), y_preds_t1)
+                score_t1_cv[split, t1] = score_t1
+            for t2 in trange(ntimes):
+                if tg_bool == True:
+                    #y_preds0 = model.decision_function(X[test, :, t2])
+                    #y_preds = np.exp(y_preds0) / np.sum(np.exp(y_preds0))
+                    y_preds = model.predict_proba(X[test, :, t2])[:, 1]
+                    #score = correlate(y[test].astype(float), y_preds)
+                    score = sklearn.metrics.roc_auc_score(y[test].astype(float), y_preds)  # best for classification (not for regression)
+                    scores[split, t1, t2] = score
+                    score_mean = scores.mean(0)
+    if score_t1_bool == True:
+        score_t1_mean = score_t1_cv.mean(0)
+        df_results = pd.DataFrame()
+        df_results["time"] = times
+        df_results["AUC"] = score_t1_mean
+        df_results["label"] = label
+        fig_decod = plot(df_results)
+        report_TG.add_figure(fig_decod, label, tags=word_phoneme)
     return score_mean
     # on s'attend à ce que le score de decodabilité augmente une fois le mot/phonème entendu
 
@@ -216,8 +237,8 @@ def plot_TG_matrix(times, label, word_phoneme, score_matrix, root = "/Users/Jose
     plt.xticks([n for n, i in enumerate(times) if n % 5 == 0], [i for n, i in enumerate(times) if n % 5 == 0])
     plt.yticks([n for n, i in enumerate(times) if n % 5 == 0], [i for n, i in enumerate(times) if n % 5 == 0])
     cbar = plt.colorbar(im, ax=ax)
-    #cbar.set_label('ROC AUC')
-    cbar.set_label("R score")
+    cbar.set_label('ROC AUC')
+    #cbar.set_label("R score")
     time_inst = time.time()
     plt.savefig(root + word_phoneme + "_" + label + "_" + str(time_inst)[-4 :] + ".png")
     return fig
