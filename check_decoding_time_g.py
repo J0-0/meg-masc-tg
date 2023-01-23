@@ -20,10 +20,10 @@ mne.set_log_level(False)
 
 ### constants ###
 nb_min_ses = 0
-nb_max_ses = 1
+nb_max_ses = 2
 
 nb_min_task = 0
-nb_max_task = 1
+nb_max_task = 4
 ###
 
 class PATHS :
@@ -49,6 +49,10 @@ def segment(raw) :
         meta.append(d)
     meta = pd.DataFrame(meta)
     meta["intercept"] = 1.0
+    meta["is_session_0"] = False
+    meta["is_session_1"] = False
+    for task in range(nb_min_task, nb_max_task):
+        meta["is_task_"+str(task)] = False
 
     # compute voicing
     phonemes = meta.query('kind=="phoneme"')
@@ -60,6 +64,7 @@ def segment(raw) :
         meta.loc[d.index, "voiced"] = match.iloc[0].phonation == "v"
 
     # compute word frequency and merge w/ phoneme
+
     meta["is_word"] = False
     words = meta.query('kind=="word"').copy()
     assert len(words) > 10  # why ?
@@ -132,7 +137,7 @@ def _get_epochs(subject):
             )
             try :
                 raw = mne_bids.read_raw_bids(bids_path)
-            except FileNotFoundError :
+            except FileNotFoundError:
                 print("missing", subject, session, task)
                 continue
             raw = raw.pick_types(
@@ -146,8 +151,11 @@ def _get_epochs(subject):
             ).astype(int)
             epochs.metadata["task"] = task
             epochs.metadata["session"] = session
-
+            #epochs.metadata["is_session_0"] = True
+            epochs.metadata["is_session_" + str(session)] = True
+            epochs.metadata["is_task_" + str(task)] = True
             all_epochs.append(epochs)
+
     if not len(all_epochs) :
         return
     epochs = mne.concatenate_epochs(all_epochs)
@@ -163,31 +171,78 @@ def _get_epochs(subject):
     epochs.metadata["label"] = label
     return epochs
 
-def decod_specific_label(times, m, label, y_all, X_all, word_phoneme, tg_bool=False):
-    m = m.reset_index()
-    y = y_all[m.index]
-    X = X_all[m.index]
+def _decod_one_subject(subject) :
+    epochs = _get_epochs(subject)
+    if epochs is None:
+        return
+    # words
+    words0 = epochs["is_word"]
+    for session in range(nb_min_ses, nb_max_ses):
+        print("session = ", session)
+        words_ses = words0["is_session_"+ str(session)]
+        for task in range(nb_min_task, nb_max_task) :
+            print("task = ", task)
+            words = words_ses["is_task_" + str(task)]
+            X_words = words.get_data() * 1e13
+            y_words = words.metadata["wordfreq"].values
+            print("X_words, y_words ", X_words.shape, y_words.shape)
+            print("X_words =", X_words)
+            print("y_words =", y_words)
+            print("words =", words)
+            evo = words.average()
+            fig_evo = evo.plot(spatial_colors=True, show=False)
+            print("session ", session, [X_words[i, 0, 0] for i in range(9)])
+            decod_specific_label(words.times,
+                                 "subject_"+ str(subject) +"_session_"+ str(session)+ str(session)+"_task_"+ str(task),
+                                 y_words, X_words, word_phoneme = "words")
+
+    # Phonemes
+    phonemes0 = epochs["not is_word"]
+    print("phonemes0 =", phonemes0)
+    for session in range(nb_min_ses, nb_max_ses):
+        print("session = ", session)
+        phonemes_ses = phonemes0["is_session_" + str(session)]
+        for task in range(nb_min_task, nb_max_task) :
+            print("task = ", task)
+            phonemes = phonemes_ses["is_task_" + str(task)]
+            evo_ph = phonemes.average()
+            fig_evo_ph = evo_ph.plot(spatial_colors=True, show=False)
+            X_ph = phonemes.get_data() * 1e13
+            y_ph = phonemes.metadata["voiced"].values
+            print("X_ph, y_ph ", X_ph.shape, y_ph.shape)
+            print("phonemes =", phonemes)
+            print("X_ph =", X_words)
+            print("y_ph =", y_words)
+            decod_specific_label(phonemes.times,
+                                 "subject_"+ str(subject) +"_session_"+ str(session)+"_task_"+ str(task),
+                                 y_ph, X_ph, word_phoneme = "phonemes")
+    return fig_evo, fig_evo_ph
+
+def decod_specific_label(times, label, y, X, word_phoneme, tg_bool=True):
     score_matrix = decod(X, y, word_phoneme, label, times)
     if tg_bool == True :
         fig_each_ses_task_subject = plot_TG_matrix(times, label, word_phoneme, score_matrix)
         report_TG.add_figure(fig_each_ses_task_subject, label, tags=word_phoneme)
+        report_TG.save("decoding_TG.html", open_browser=False, overwrite=True)
 
 def decod(X, y, word_phoneme, label, times):
     assert len(X) == len(y)
-    if word_phoneme == "words":
+    if word_phoneme == "words": #or word_phoneme == "phonemes":
         y = scale(y[:, None])[:, 0]
         if len(set(y[:1000])) > 2:
             y = y > np.nanmedian(y)
+    print(word_phoneme, y)
     score_mean = cross_val_score(X, y, label, word_phoneme, times)  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
     return score_mean
 
-def cross_val_score(X,y, label, word_phoneme, times, score_t1_bool = True, tg_bool = False):  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
+def cross_val_score(X,y_0, label, word_phoneme, times, score_t1_bool = True, tg_bool = True):  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
     model = make_pipeline(StandardScaler(),
                           LinearDiscriminantAnalysis())
     #model = make_pipeline(StandardScaler(), LogisticRegression())
 
     # fit predict
     n, nchans, ntimes = X.shape  # what is n and ntimes ?
+    y = y_0[:] # is it useful ?
     # 27 English speakers who listened to 2 sessions of 1h of naturalistic stories
     # words: n, nchans, ntimes = 668 208 41 (n: nb of trials: words or phonemes)
     # phonemes: n, nchans, ntimes = 1794 208 41
@@ -223,12 +278,13 @@ def cross_val_score(X,y, label, word_phoneme, times, score_t1_bool = True, tg_bo
         df_results["label"] = label
         fig_decod = plot(df_results)
         report_TG.add_figure(fig_decod, label, tags=word_phoneme)
+        #report_TG.save("decoding_TG.html", open_browser=True, overwrite=True)
     return score_mean
     # on s'attend à ce que le score de decodabilité augmente une fois le mot/phonème entendu
 
 def plot_TG_matrix(times, label, word_phoneme, score_matrix, root = "/Users/Josephine/Desktop/tg_figures/figure_plot_"):
     fig, ax = plt.subplots(1, 1)
-    im = ax.imshow(score_matrix, interpolation='lanczos', origin='lower', cmap='RdBu_r', vmin=0., vmax=1.)
+    im = ax.imshow(score_matrix, interpolation='lanczos', origin='lower', cmap='RdBu_r', vmin=0.35, vmax=0.65)
     ax.set_xlabel('Testing Time (s)')
     ax.set_ylabel('Training Time (s)')
     ax.set_title('Temporal generalization')
@@ -240,31 +296,9 @@ def plot_TG_matrix(times, label, word_phoneme, score_matrix, root = "/Users/Jose
     cbar.set_label('ROC AUC')
     #cbar.set_label("R score")
     time_inst = time.time()
-    plt.savefig(root + word_phoneme + "_" + label + "_" + str(time_inst)[-4 :] + ".png")
+    #plt.savefig(root + word_phoneme + "_" + label + "_" + str(time_inst)[-4 :] + ".png")
     return fig
 
-def _decod_one_subject(subject) :
-    epochs = _get_epochs(subject)
-    if epochs is None :
-        return
-    # words
-    words = epochs["is_word"]
-    evo = words.average()
-    fig_evo = evo.plot(spatial_colors=True, show=False)
-    X_all_words = words.get_data() * 1e13
-    y_all_words = words.metadata["wordfreq"].values
-    for label_w, m_w in words.metadata.groupby("label"):
-        decod_specific_label(words.times, m_w, label_w, y_all_words, X_all_words, word_phoneme = "words")
-
-    # Phonemes
-    phonemes = epochs["not is_word"]
-    evo = phonemes.average()
-    fig_evo_ph = evo.plot(spatial_colors=True, show=False)
-    X_all_ph = phonemes.get_data() * 1e13
-    y_all_ph = phonemes.metadata["voiced"].values
-    for label_ph, m_ph in phonemes.metadata.groupby("label"):
-        decod_specific_label(phonemes.times, m_ph, label_ph, y_all_ph, X_all_ph, word_phoneme = "phonemes")
-    return fig_evo, fig_evo_ph
 
 if __name__ == "__main__" :
     report = mne.Report()
@@ -284,8 +318,8 @@ if __name__ == "__main__" :
             fig_evo_ph,
         ) = out
 
-        report.add_figure(fig_evo, subject, tags="evo_word")
-        report.add_figure(fig_evo_ph, subject, tags="evo_phoneme")
+        report_TG.add_figure(fig_evo, subject, tags="evo_word")
+        report_TG.add_figure(fig_evo_ph, subject, tags="evo_phoneme")
         report.save("decoding.html", open_browser=False, overwrite=True)
         report_TG.save("decoding_TG.html", open_browser=False, overwrite=True)
         print("done")

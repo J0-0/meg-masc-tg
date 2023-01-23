@@ -1,12 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="044f6c23-2362-4071-8482-12cab6c487b8" name="Default Changelist" comment="temporal generalization with AUC">
+    <list default="true" id="044f6c23-2362-4071-8482-12cab6c487b8" name="Default Changelist" comment="temporal generalization and/or plot of score on one time step with several models">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/check_decoding.py" beforeDir="false" afterPath="$PROJECT_DIR$/check_decoding.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/check_decoding_time_g.py" beforeDir="false" afterPath="$PROJECT_DIR$/check_decoding_time_g.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/decoding.html" beforeDir="false" afterPath="$PROJECT_DIR$/decoding.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/decoding_TG.html" beforeDir="false" afterPath="$PROJECT_DIR$/decoding_TG.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/decoding_TG.html" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -137,7 +136,14 @@
       <option name="project" value="LOCAL" />
       <updated>1673975399824</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary="temporal generalization and/or plot of score on one time step with several models">
+      <created>1674146235315</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1674146235315</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -155,6 +161,7 @@
   <component name="VcsManagerConfiguration">
     <MESSAGE value="first commit" />
     <MESSAGE value="temporal generalization with AUC" />
-    <option name="LAST_COMMIT_MESSAGE" value="temporal generalization with AUC" />
+    <MESSAGE value="temporal generalization and/or plot of score on one time step with several models" />
+    <option name="LAST_COMMIT_MESSAGE" value="temporal generalization and/or plot of score on one time step with several models" />
   </component>
 </project>
