@@ -23,7 +23,7 @@ nb_min_ses = 0
 nb_max_ses = 2
 
 nb_min_task = 0
-nb_max_task = 4
+nb_max_task = 1
 ###
 
 class PATHS :
@@ -56,15 +56,16 @@ def segment(raw) :
 
     # compute voicing
     phonemes = meta.query('kind=="phoneme"')
+    #print("phonemes ! ", [(ph, len(d.index), d) for (ph, d) in phonemes.groupby("phoneme")])
     assert len(phonemes)
     for ph, d in phonemes.groupby("phoneme") :
         ph = ph.split("_")[0]
         match = ph_info.query("phoneme==@ph")
         assert len(match) == 1
         meta.loc[d.index, "voiced"] = match.iloc[0].phonation == "v"
+        # meta.loc[d.index, "frequency"] = np.round(len(d.index)/len(phonemes), 2) then d[frequency] = [auc_score1, auc_score2, etc.] et plor auc average as a fct of frequency
 
     # compute word frequency and merge w/ phoneme
-
     meta["is_word"] = False
     words = meta.query('kind=="word"').copy()
     assert len(words) > 10  # why ?
@@ -180,21 +181,22 @@ def _decod_one_subject(subject) :
     for session in range(nb_min_ses, nb_max_ses):
         print("session = ", session)
         words_ses = words0["is_session_"+ str(session)]
-        for task in range(nb_min_task, nb_max_task) :
-            print("task = ", task)
-            words = words_ses["is_task_" + str(task)]
-            X_words = words.get_data() * 1e13
-            y_words = words.metadata["wordfreq"].values
-            print("X_words, y_words ", X_words.shape, y_words.shape)
-            print("X_words =", X_words)
-            print("y_words =", y_words)
-            print("words =", words)
-            evo = words.average()
-            fig_evo = evo.plot(spatial_colors=True, show=False)
-            print("session ", session, [X_words[i, 0, 0] for i in range(9)])
-            decod_specific_label(words.times,
-                                 "subject_"+ str(subject) +"_session_"+ str(session)+ str(session)+"_task_"+ str(task),
-                                 y_words, X_words, word_phoneme = "words")
+        #for task in range(nb_min_task, nb_max_task) :
+        #   print("task = ", task)
+        #   words = words_ses["is_task_" + str(task)]
+        words = words_ses
+        X_words = words.get_data() * 1e13
+        y_words = words.metadata["wordfreq"].values
+        #print("X_words, y_words ", X_words.shape, y_words.shape)
+        #print("X_words =", X_words)
+        #print("y_words =", y_words)
+        #print("words =", words)
+        evo = words.average()
+        fig_evo = evo.plot(spatial_colors=True, show=False)
+        #print("session ", session, [X_words[i, 0, 0] for i in range(9)])
+        decod_specific_label(words.times,
+                             "subject_"+ str(subject) +"_session_"+ str(session),
+                             y_words, X_words, word_phoneme = "words")
 
     # Phonemes
     phonemes0 = epochs["not is_word"]
@@ -202,20 +204,21 @@ def _decod_one_subject(subject) :
     for session in range(nb_min_ses, nb_max_ses):
         print("session = ", session)
         phonemes_ses = phonemes0["is_session_" + str(session)]
-        for task in range(nb_min_task, nb_max_task) :
-            print("task = ", task)
-            phonemes = phonemes_ses["is_task_" + str(task)]
-            evo_ph = phonemes.average()
-            fig_evo_ph = evo_ph.plot(spatial_colors=True, show=False)
-            X_ph = phonemes.get_data() * 1e13
-            y_ph = phonemes.metadata["voiced"].values
-            print("X_ph, y_ph ", X_ph.shape, y_ph.shape)
-            print("phonemes =", phonemes)
-            print("X_ph =", X_words)
-            print("y_ph =", y_words)
-            decod_specific_label(phonemes.times,
-                                 "subject_"+ str(subject) +"_session_"+ str(session)+"_task_"+ str(task),
-                                 y_ph, X_ph, word_phoneme = "phonemes")
+        #for task in range(nb_min_task, nb_max_task) :
+        #    print("task = ", task)
+        #    phonemes = phonemes_ses["is_task_" + str(task)]
+        phonemes = phonemes_ses
+        evo_ph = phonemes.average()
+        fig_evo_ph = evo_ph.plot(spatial_colors=True, show=False)
+        X_ph = phonemes.get_data() * 1e13
+        y_ph = phonemes.metadata["voiced"].values
+        #print("X_ph, y_ph ", X_ph.shape, y_ph.shape)
+        #print("phonemes =", phonemes)
+        #print("X_ph =", X_words)
+        #print("y_ph =", y_words)
+        decod_specific_label(phonemes.times,
+                             "subject_"+ str(subject) +"_session_"+ str(session), #+"_task_"+ str(task),
+                             y_ph, X_ph, word_phoneme = "phonemes")
     return fig_evo, fig_evo_ph
 
 def decod_specific_label(times, label, y, X, word_phoneme, tg_bool=True):
@@ -231,7 +234,7 @@ def decod(X, y, word_phoneme, label, times):
         y = scale(y[:, None])[:, 0]
         if len(set(y[:1000])) > 2:
             y = y > np.nanmedian(y)
-    print(word_phoneme, y)
+    #print(word_phoneme, y)
     score_mean = cross_val_score(X, y, label, word_phoneme, times)  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
     return score_mean
 
@@ -241,7 +244,8 @@ def cross_val_score(X,y_0, label, word_phoneme, times, score_t1_bool = True, tg_
     #model = make_pipeline(StandardScaler(), LogisticRegression())
 
     # fit predict
-    n, nchans, ntimes = X.shape  # what is n and ntimes ?
+    n, nchans, ntimes = X.shape
+    #print("X.shape", X.shape)
     y = y_0[:] # is it useful ?
     # 27 English speakers who listened to 2 sessions of 1h of naturalistic stories
     # words: n, nchans, ntimes = 668 208 41 (n: nb of trials: words or phonemes)
