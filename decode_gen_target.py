@@ -43,6 +43,7 @@ class PATHS :
     bids = data / name_data
 
 def segment(raw) :
+    ph_info = pd.read_csv("phoneme_info.csv")  # phonation: "v", "uv", what do these mean ? (voiced ? as in ~ vowel)
     list_freqs = []
     # preproc annotations
     meta = list()
@@ -107,7 +108,7 @@ def segment(raw) :
     th = np.percentile(np.abs(epochs._data), 95)
     epochs._data[:] = np.clip(epochs._data, -th, th)
     epochs.apply_baseline((-0.2, 0.0))
-    print("list_freqs =",list_freqs)
+    #print("list_freqs =",list_freqs)
     return epochs
 
 def correlate(X, Y):
@@ -184,47 +185,47 @@ def _get_epochs(subject):
     epochs.metadata["label"] = label
     return epochs
 
-def _decod_one_subject(subject) :
+def _decod_one_subject(subject, target) :
     d_freq_score = {}
     epochs = _get_epochs(subject)
     if epochs is None:
         return
-    # words
-    words0 = epochs["is_word"]
-    for session in range(nb_min_ses, nb_max_ses):
-        print("session = ", session)
-        words_ses = words0["is_session_"+ str(session)]
-        #for task in range(nb_min_task, nb_max_task) :
-        #   print("task = ", task)
-        #   words = words_ses["is_task_" + str(task)]
-        words = words_ses
-        X_words = words.get_data() * 1e13
-        #y_words = words.metadata["wordfreq"].values
-        y_words = words.metadata.shift(1).wordfreq.values
-        evo = words.average()
-        fig_evo = evo.plot(spatial_colors=True, show=False)
-        decod_specific_label(words.times,
-                             "subject_"+ str(subject) +"_session_"+ str(session),
-                             y_words, X_words, word_phoneme = "words")
+    if target == "words":
+        words0 = epochs["is_word"]
+        for session in range(nb_min_ses, nb_max_ses):
+            print("session = ", session)
+            words_ses = words0["is_session_"+ str(session)]
+            #for task in range(nb_min_task, nb_max_task) :
+            #   print("task = ", task)
+            #   words = words_ses["is_task_" + str(task)]
+            words = words_ses
+            X_words = words.get_data() * 1e13
+            #y_words = words.metadata["wordfreq"].values
+            y_words = words.metadata.shift(1).wordfreq.values
+            evo = words.average()
+            fig_evo = evo.plot(spatial_colors=True, show=False)
+            decod_specific_label(words.times,
+                                 "subject_"+ str(subject) +"_session_"+ str(session),
+                                 y_words, X_words, word_phoneme = "words")
 
-    # Phonemes
-    phonemes0 = epochs["not is_word"]
-    print("phonemes0 =", phonemes0)
-    for session in range(nb_min_ses, nb_max_ses):
-        print("session = ", session)
-        phonemes_ses = phonemes0["is_session_" + str(session)]
-        #for task in range(nb_min_task, nb_max_task) :
-        #    print("task = ", task)
-        #    phonemes = phonemes_ses["is_task_" + str(task)]
-        phonemes = phonemes_ses
-        evo_ph = phonemes.average()
-        fig_evo_ph = evo_ph.plot(spatial_colors=True, show=False)
-        X_ph = phonemes.get_data() * 1e13
-        y_ph = phonemes.metadata["voiced"].values
-        X_freq = phonemes.metadata["frequency"].values
-        decod_specific_label(phonemes.times,
-        "subject_"+ str(subject) +"_session_"+ str(session), #+"_task_"+ str(task),
-                             y_ph, X_ph, X_freq, word_phoneme = "phonemes")
+    if target == "vowels":
+        phonemes0 = epochs["not is_word"]
+        print("phonemes0 =", phonemes0)
+        for session in range(nb_min_ses, nb_max_ses):
+            print("session = ", session)
+            phonemes_ses = phonemes0["is_session_" + str(session)]
+            #for task in range(nb_min_task, nb_max_task) :
+            #    print("task = ", task)
+            #    phonemes = phonemes_ses["is_task_" + str(task)]
+            phonemes = phonemes_ses
+            evo_ph = phonemes.average()
+            fig_evo_ph = evo_ph.plot(spatial_colors=True, show=False)
+            X_ph = phonemes.get_data() * 1e13
+            y_ph = phonemes.metadata["voiced"].values
+            X_freq = phonemes.metadata["frequency"].values
+            decod_specific_label(phonemes.times,
+            "subject_"+ str(subject) +"_session_"+ str(session), #+"_task_"+ str(task),
+                                 y_ph, X_ph, X_freq, word_phoneme = "phonemes")
 
     return fig_evo, fig_evo_ph
 
@@ -331,21 +332,23 @@ if __name__ == "__main__" :
     subjects = pd.read_csv(PATHS.bids / "participants.tsv", sep="\t")
     subjects = subjects.participant_id.apply(lambda x : x.split("-")[1]).values
     # decoding
-    for subject in subjects:
-        print(subject)
-        out = _decod_one_subject(subject)
-        if out is None :
-            continue
-        (
-            fig_evo,
-            fig_evo_ph,
-        ) = out
+    targets = ["words", "vowels"]
+    for target in targets:
+        for subject in subjects:
+            print(subject)
+            out = _decod_one_subject(subject, target)
+            if out is None :
+                continue
+            (
+                fig_evo,
+                fig_evo_ph,
+            ) = out
 
-        report_TG.add_figure(fig_evo, subject, tags="evo_word")
-        report_TG.add_figure(fig_evo_ph, subject, tags="evo_phoneme")
-        report.save("decoding.html", open_browser=False, overwrite=True)
-        report_TG.save("decoding_TG.html", open_browser=False, overwrite=True)
-        print("done")
+            report_TG.add_figure(fig_evo, subject, tags="evo_word")
+            report_TG.add_figure(fig_evo_ph, subject, tags="evo_phoneme")
+            report.save("decoding.html", open_browser=False, overwrite=True)
+            report_TG.save("decoding_TG.html", open_browser=False, overwrite=True)
+            print("done")
 
 
 
