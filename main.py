@@ -13,6 +13,18 @@ import pandas as pd
 from decode_gen_target import PATHS
 from decode_gen_target import _decod_one_subject
 
+
+### constants ###
+name_data = "bids_anonym"
+#name_data = "le_petit_prince"
+
+nb_min_ses = 0
+nb_max_ses = 1 #2
+
+nb_min_task = 0
+nb_max_task = 1 #4
+###
+
 def correlate(X, Y):
     if X.ndim == 1 :
         X = X[:, None]
@@ -67,7 +79,7 @@ def decode(epochs, target):
                 scores.append(scores_)
     return scores
 
-report = mne.Report()
+#report = mne.Report()
 report_TG = mne.Report()
 subjects = list_subjects()
 ph_info = pd.read_csv("phoneme_info.csv")  # phonation: "v", "uv", what do these mean ? (voiced ? as in ~ vowel)
@@ -75,17 +87,11 @@ targets = ["vowels", "phonemes", "words"]
 for target in targets:
     for subject in subjects:
         print(subject)
-        out = _decod_one_subject(subject, target)
+        out = _decod_one_subject(report_TG, subject, target, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses)
         if out is None :
             continue
-        (
-            fig_evo,
-            fig_evo_ph,
-        ) = out
-
-        report_TG.add_figure(fig_evo, subject, tags="evo_word")
-        report_TG.add_figure(fig_evo_ph, subject, tags="evo_phoneme")
-        report.save("decoding.html", open_browser=False, overwrite=True)
+        report_TG.add_figure(out, subject, tags=str(target)+ " - " + str(subject))
+        #report.save("decoding.html", open_browser=False, overwrite=True)
         report_TG.save("decoding_TG.html", open_browser=False, overwrite=True)
         print("done")
 

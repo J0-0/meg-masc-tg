@@ -42,7 +42,7 @@ class PATHS :
     assert data.exists()
     bids = data / name_data
 
-def segment(raw) :
+def segment(raw, nb_min_task, nb_max_task) :
     ph_info = pd.read_csv("phoneme_info.csv")  # phonation: "v", "uv", what do these mean ? (voiced ? as in ~ vowel)
     list_freqs = []
     # preproc annotations
@@ -94,7 +94,7 @@ def segment(raw) :
         events,
         tmin=-0.200,
         tmax=0.6,
-        decim=40,  #20 #10
+        decim=20,  #20 #10
         baseline=(-0.2, 0.0),
         metadata=meta,
         preload=True,
@@ -133,7 +133,7 @@ def plot(result):
     ax.axhline(0, color="k")
     return fig
 
-def _get_epochs(subject):
+def _get_epochs(subject, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses):
     all_epochs = list()
     for session in range(nb_min_ses, nb_max_ses):
         print("session ", session)
@@ -148,7 +148,6 @@ def _get_epochs(subject):
                 datatype="meg",
                 root=PATHS.bids,
             )
-            # print(bids_path) ./Users/Josephine/Desktop/meg-masc-tg/bids_anonym/sub-01/ses-0/meg/sub-01_ses-0_task-0_meg.con
             try:
                 raw = mne_bids.read_raw_bids(bids_path)
             except FileNotFoundError:
@@ -159,7 +158,7 @@ def _get_epochs(subject):
             )
 
             raw.load_data().filter(0.5, 30.0, n_jobs=1)
-            epochs = segment(raw)
+            epochs = segment(raw, nb_min_task, nb_max_task)
             epochs.metadata["half"] = np.round(
                 np.linspace(0, 1.0, len(epochs))
             ).astype(int)
@@ -185,9 +184,9 @@ def _get_epochs(subject):
     epochs.metadata["label"] = label
     return epochs
 
-def _decod_one_subject(subject, target) :
+def _decod_one_subject(report_TG, subject, target, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses) :
     #d_freq_score = {}
-    epochs = _get_epochs(subject)
+    epochs = _get_epochs(subject, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses)
     if epochs is None:
         return
     if target == "words":
@@ -204,7 +203,7 @@ def _decod_one_subject(subject, target) :
             y_words = words.metadata.shift(1).wordfreq.values
             evo = words.average()
             fig_evo = evo.plot(spatial_colors=True, show=False)
-            decod_specific_label(words.times,
+            decod_specific_label(report_TG, words.times,
                                  "subject_"+ str(subject) +"_session_"+ str(session),
                                  y_words, X_words, word_phoneme = "words")
         return fig_evo
@@ -224,12 +223,12 @@ def _decod_one_subject(subject, target) :
             X_ph = phonemes.get_data() * 1e13
             y_ph = phonemes.metadata["voiced"].values
             #X_freq = phonemes.metadata["frequency"].values
-            decod_specific_label(phonemes.times,
+            decod_specific_label(report_TG, phonemes.times,
             "subject_"+ str(subject) +"_session_"+ str(session), #+"_task_"+ str(task),
                                  y_ph, X_ph, word_phoneme = "phonemes")
         return fig_evo_ph
 
-def decod_specific_label(times, label, y, X, word_phoneme, tg_bool=True):
+def decod_specific_label(report_TG, times, label, y, X, word_phoneme, tg_bool=True):
     score_matrix = decod(X, y, word_phoneme, label, times)
     if tg_bool == True :
         fig_each_ses_task_subject = plot_TG_matrix(times, label, word_phoneme, score_matrix)
@@ -245,6 +244,7 @@ def decod(X, y, word_phoneme, label, times):
             y = y > np.nanmedian(y)
     #print(word_phoneme, y)
     score_mean = cross_val_score(X, y, label, word_phoneme, times)  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
+    print("score_mean =", score_mean)
     return score_mean
 
 def cross_val_score(X,y_0, label, word_phoneme, times, score_t1_bool = True, tg_bool = True):  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
@@ -301,8 +301,8 @@ def cross_val_score(X,y_0, label, word_phoneme, times, score_t1_bool = True, tg_
         #print("d_freq_score = ", d_freq_score)
         ##report_TG.add_figure(fig_decod, label, tags=word_phoneme)
         #report_TG.save("decoding_TG.html", open_browser=True, overwrite=True)
-    return score_t1_mean
-    #return score_mean
+    #return score_t1_mean
+    return score_mean
     # on s'attend à ce que le score de decodabilité augmente une fois le mot/phonème entendu
 
 def plot_TG_matrix(times, label, word_phoneme, score_matrix, root = "/Users/Josephine/Desktop/tg_figures/figure_plot_"):
@@ -322,7 +322,7 @@ def plot_TG_matrix(times, label, word_phoneme, score_matrix, root = "/Users/Jose
     #plt.savefig(root + word_phoneme + "_" + label + "_" + str(time_inst)[-4 :] + ".png")
     return fig
 
-
+"""
 if __name__ == "__main__" :
     report = mne.Report()
     report_TG = mne.Report()
@@ -348,6 +348,7 @@ if __name__ == "__main__" :
             report.save("decoding.html", open_browser=False, overwrite=True)
             report_TG.save("decoding_TG.html", open_browser=False, overwrite=True)
             print("done")
+"""
 
 
 
