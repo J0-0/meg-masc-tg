@@ -69,11 +69,11 @@ def segment(raw) :
         match = ph_info.query("phoneme==@ph")
         assert len(match) == 1
         meta.loc[d.index, "voiced"] = match.iloc[0].phonation == "v"
-        freq = np.round(len(d.index)/len(phonemes), 2)
-        meta.loc[d.index, "frequency"] = freq
+        #freq = np.round(len(d.index)/len(phonemes), 2)
+        #meta.loc[d.index, "frequency"] = freq
         # then d[frequency] = [auc_score1, auc_score2, etc.] et plor auc average as a fct of frequency
         #meta["frequency_"+ str(freq)] = False
-        list_freqs.append(freq)
+        #list_freqs.append(freq)
 
     # compute word frequency and merge w/ phoneme
     meta["is_word"] = False
@@ -186,7 +186,7 @@ def _get_epochs(subject):
     return epochs
 
 def _decod_one_subject(subject, target) :
-    d_freq_score = {}
+    #d_freq_score = {}
     epochs = _get_epochs(subject)
     if epochs is None:
         return
@@ -207,6 +207,7 @@ def _decod_one_subject(subject, target) :
             decod_specific_label(words.times,
                                  "subject_"+ str(subject) +"_session_"+ str(session),
                                  y_words, X_words, word_phoneme = "words")
+        return fig_evo
 
     if target == "vowels":
         phonemes0 = epochs["not is_word"]
@@ -222,39 +223,38 @@ def _decod_one_subject(subject, target) :
             fig_evo_ph = evo_ph.plot(spatial_colors=True, show=False)
             X_ph = phonemes.get_data() * 1e13
             y_ph = phonemes.metadata["voiced"].values
-            X_freq = phonemes.metadata["frequency"].values
+            #X_freq = phonemes.metadata["frequency"].values
             decod_specific_label(phonemes.times,
             "subject_"+ str(subject) +"_session_"+ str(session), #+"_task_"+ str(task),
-                                 y_ph, X_ph, X_freq, word_phoneme = "phonemes")
+                                 y_ph, X_ph, word_phoneme = "phonemes")
+        return fig_evo_ph
 
-    return fig_evo, fig_evo_ph
-
-def decod_specific_label(times, label, y, X, X_freq, word_phoneme, tg_bool=False):
-    score_matrix = decod(X, y, X_freq, word_phoneme, label, times)
+def decod_specific_label(times, label, y, X, word_phoneme, tg_bool=True):
+    score_matrix = decod(X, y, word_phoneme, label, times)
     if tg_bool == True :
         fig_each_ses_task_subject = plot_TG_matrix(times, label, word_phoneme, score_matrix)
         report_TG.add_figure(fig_each_ses_task_subject, label, tags=word_phoneme)
         report_TG.save("decoding_TG.html", open_browser=False, overwrite=True)
     return score_matrix
 
-def decod(X, y, X_freq, word_phoneme, label, times):
+def decod(X, y, word_phoneme, label, times):
     assert len(X) == len(y)
     if word_phoneme == "words": #or word_phoneme == "phonemes":
         y = scale(y[:, None])[:, 0]
         if len(set(y[:1000])) > 2:
             y = y > np.nanmedian(y)
     #print(word_phoneme, y)
-    score_mean = cross_val_score(X, y, X_freq, label, word_phoneme, times)  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
+    score_mean = cross_val_score(X, y, label, word_phoneme, times)  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
     return score_mean
 
-def cross_val_score(X,y_0, X_freq, label, word_phoneme, times, score_t1_bool = True, tg_bool = False):  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
+def cross_val_score(X,y_0, label, word_phoneme, times, score_t1_bool = True, tg_bool = True):  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
     model = make_pipeline(StandardScaler(),
                           LinearDiscriminantAnalysis())
     #model = make_pipeline(StandardScaler(), LogisticRegression())
 
-    d_freq_score = {}
-    for freq_ph in X_freq:
-        d_freq_score[freq_ph] = []
+    #d_freq_score = {}
+    #for freq_ph in X_freq:
+        #d_freq_score[freq_ph] = []
 
     # fit predict
     n, nchans, ntimes = X.shape
@@ -269,8 +269,7 @@ def cross_val_score(X,y_0, X_freq, label, word_phoneme, times, score_t1_bool = T
     scores = np.zeros((nsplits, ntimes, ntimes))
     score_t1_cv = np.zeros((nsplits, ntimes))
     for split, (train, test) in enumerate(cv.split(X)):
-        #for t1 in trange(ntimes):
-        for t1 in [21]:
+        for t1 in trange(ntimes):
             model.fit(X[train, :, t1], y[train].astype(float))  # n_trial -> chaque phoneme/word
             # is it better to mix the training and testing data for this dataset or not ?
             # yes for homogeneisation but careful for independance too
@@ -280,8 +279,8 @@ def cross_val_score(X,y_0, X_freq, label, word_phoneme, times, score_t1_bool = T
                 y_preds_t1 = model.predict_proba(X[test, :, t1])[:, 1]
                 score_t1 = sklearn.metrics.roc_auc_score(y[test].astype(float), y_preds_t1)
                 diff_error = np.absolute(y[test].astype(float) - y_preds_t1) # one vs all AUC ?
-                for freq_ph, score in zip(X_freq, diff_error):
-                    d_freq_score[freq_ph].append(score)
+                #for freq_ph, score in zip(X_freq, diff_error):
+                    #d_freq_score[freq_ph].append(score)
                 score_t1_cv[split, t1] = score_t1
             for t2 in trange(ntimes):
                 if tg_bool == True:

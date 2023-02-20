@@ -2,14 +2,13 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="044f6c23-2362-4071-8482-12cab6c487b8" name="Default Changelist" comment="temporal generalization and plot of AUC score on one time step for different sessions and different tasks">
-      <change afterPath="$PROJECT_DIR$/check_decoding_time_g_petit_prince.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/decode_gen_target.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/plot_score_on_freq.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/meg-masc-tg.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/meg-masc-tg.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/check_decoding_time_g.py" beforeDir="false" afterPath="$PROJECT_DIR$/check_decoding_time_g.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/decoding.html" beforeDir="false" afterPath="$PROJECT_DIR$/decoding.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/phoneme_info.csv" beforeDir="false" afterPath="$PROJECT_DIR$/phoneme_info.csv" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/data_path.txt" beforeDir="false" afterPath="$PROJECT_DIR$/data_path.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/decode_gen_target.py" beforeDir="false" afterPath="$PROJECT_DIR$/decode_gen_target.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,30 +43,9 @@
     <property name="RunOnceActivity.OpenProjectViewOnStart" value="true" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
-    <property name="settings.editor.selected.configurable" value="configurable.group.project" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
   <component name="RunManager" selected="Python.main">
-    <configuration name="check_decoding" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
-      <module name="meg-masc-tg" />
-      <option name="INTERPRETER_OPTIONS" value="" />
-      <option name="PARENT_ENVS" value="true" />
-      <envs>
-        <env name="PYTHONUNBUFFERED" value="1" />
-      </envs>
-      <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-      <option name="IS_MODULE_SDK" value="true" />
-      <option name="ADD_CONTENT_ROOTS" value="true" />
-      <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/check_decoding.py" />
-      <option name="PARAMETERS" value="" />
-      <option name="SHOW_COMMAND_LINE" value="false" />
-      <option name="EMULATE_TERMINAL" value="false" />
-      <option name="MODULE_MODE" value="false" />
-      <option name="REDIRECT_INPUT" value="false" />
-      <option name="INPUT_FILE" value="" />
-      <method v="2" />
-    </configuration>
     <configuration name="check_decoding_time_g" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="meg-masc-tg" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -102,6 +80,27 @@
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
       <option name="SCRIPT_NAME" value="$PROJECT_DIR$/check_decoding_time_g_petit_prince.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="decode_gen_target" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name="meg-masc-tg" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/decode_gen_target.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -155,10 +154,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.main" />
-        <item itemvalue="Python.check_decoding_time_g" />
         <item itemvalue="Python.check_decoding_time_g_petit_prince" />
+        <item itemvalue="Python.check_decoding_time_g" />
+        <item itemvalue="Python.decode_gen_target" />
         <item itemvalue="Python.plot_score_on_freq" />
-        <item itemvalue="Python.check_decoding" />
       </list>
     </recent_temporary>
   </component>
@@ -206,7 +205,14 @@
       <option name="project" value="LOCAL" />
       <updated>1674586284405</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="temporal generalization and plot of AUC score on one time step for different sessions and different tasks">
+      <created>1676308452181</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1676308452182</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">

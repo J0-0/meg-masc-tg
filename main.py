@@ -3,6 +3,8 @@
 # from .analyses import decode, time_gen
 # from .utils
 
+import mne
+import mne_bids
 import numpy as np
 from sklearn.linear_model import LogisticRegression, RidgeCV, RidgeClassifierCV
 from sklearn.metrics import roc_auc_score
@@ -65,10 +67,25 @@ def decode(epochs, target):
                 scores.append(scores_)
     return scores
 
+report = mne.Report()
+report_TG = mne.Report()
 subjects = list_subjects()
 ph_info = pd.read_csv("phoneme_info.csv")  # phonation: "v", "uv", what do these mean ? (voiced ? as in ~ vowel)
 targets = ["vowels", "phonemes", "words"]
 for target in targets:
     for subject in subjects:
-        _decod_one_subject(subject, target)
+        print(subject)
+        out = _decod_one_subject(subject, target)
+        if out is None :
+            continue
+        (
+            fig_evo,
+            fig_evo_ph,
+        ) = out
+
+        report_TG.add_figure(fig_evo, subject, tags="evo_word")
+        report_TG.add_figure(fig_evo_ph, subject, tags="evo_phoneme")
+        report.save("decoding.html", open_browser=False, overwrite=True)
+        report_TG.save("decoding_TG.html", open_browser=False, overwrite=True)
+        print("done")
 
