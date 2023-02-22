@@ -62,18 +62,65 @@ def segment(raw, nb_min_task, nb_max_task) :
 
     # compute voicing
     phonemes = meta.query('kind=="phoneme"')
-    #print("phonemes ! ", [(ph, len(d.index), d) for (ph, d) in phonemes.groupby("phoneme")])
     assert len(phonemes)
+    # d_phonemes = {}
+    # d_phonemes["phonation"] = []
+    # d_phonemes["manner"] = []
+    # d_phonemes["place"] = []
+    # d_phonemes["frontback"] = []
+    # d_phonemes["roundness"] = []
+    # d_phonemes["centrality"] = []
+    # all_elements_phonemes = []
+    all_elements_phonemes = [['v', 'v', 'lo', 'b', 'u', 'c'], ['v', 'v', 'lo', 'f', 'u', 'f'],
+                             ['v', 'v', 'm', 'b', 'r', 'f'], ['v', 'v', 'm', 'f', 'u', 'f'],
+                             ['v', 'o', 'l', 'f', 'u', 'n'], ['uv', 'f', 'c', 'f', 'u', 'n'],
+                             ['v', 'o', 'c', 'f', 'u', 'n'], ['v', 'f', 'd', 'f', 'u', 'n'],
+                             ['v', 'a', 'v', 'b', 'u', 'f'], ['v', 'v', 'h', 'f', 'u', 'f'],
+                             ['uv', 'f', 'd', 'f', 'u', 'n'], ['v', 'o', 'v', 'b', 'u', 'n'],
+                             ['uv', 'f', 'g', 'b', 'u', 'n'], ['v', 'f', 'c', 'f', 'u', 'n'],
+                             ['uv', 'o', 'v', 'b', 'u', 'n'], ['v', 'a', 'c', 'f', 'u', 'n'],
+                             ['v', 'n', 'l', 'f', 'u', 'n'], ['v', 'n', 'c', 'f', 'u', 'n'],
+                             ['v', 'n', 'v', 'b', 'u', 'n'], ['v', 'v', 'h', 'b', 'r', 'f'],
+                             ['uv', 'o', 'l', 'f', 'u', 'n'], ['v', 'a', 'v', 'b', 'u', 'n'],
+                             ['uv', 'o', 'c', 'f', 'u', 'n'], ['v', 'a', 'l', 'f', 'r', 'n']]
+    d_phonemes = {'phonation' : ['v', 'uv'], 'manner' : ['v', 'o', 'f', 'a', 'n'],
+                  'place' : ['lo', 'm', 'l', 'c', 'd', 'v', 'h', 'g'], 'frontback' : ['b', 'f'],
+                  'roundness' : ['u', 'r'], 'centrality' : ['c', 'f', 'n']}
+
+    names = []
     for ph, d in phonemes.groupby("phoneme") :
         ph = ph.split("_")[0]
         match = ph_info.query("phoneme==@ph")
         assert len(match) == 1
         meta.loc[d.index, "voiced"] = match.iloc[0].phonation == "v"
-        #freq = np.round(len(d.index)/len(phonemes), 2)
-        #meta.loc[d.index, "frequency"] = freq
-        # then d[frequency] = [auc_score1, auc_score2, etc.] et plor auc average as a fct of frequency
-        #meta["frequency_"+ str(freq)] = False
-        #list_freqs.append(freq)
+        # list_els_ph = []
+        # for (n, key_item), value in zip(enumerate(match.iloc[0].keys()), d_phonemes.values()):
+        #     element= match.iloc[0][n+1]
+        #     if element not in value:
+        #         value.append(element)
+        #     list_els_ph.append(element)
+        # if list_els_ph not in all_elements_phonemes:
+        #     all_elements_phonemes.append(list_els_ph)
+        # print("all_elements_phonemes =", all_elements_phonemes)
+        #phonemes = ['aa', 'ae', 'ah', 'ao', 'aw', 'ay', 'b', 'ch', 'd', 'dh', 'eh', 'er', 'ey', 'f', 'g', 'hh', 'ih', 'iy', 'jh', 'k', 'l', 'm', 'n', 'ng', 'ow', 'oy', 'p', 'r', 's', 'sh', 't', 'th', 'uh', 'uw', 'v', 'w', 'y', 'z', 'zh']
+        for el_category in all_elements_phonemes:
+            phonation = el_category[0]
+            manner = el_category[1]
+            place = el_category[2]
+            frontback = el_category[3]
+            roundness = el_category[4]
+            centrality = el_category[5]
+            name = phonation + "_" + manner + "_" + place + "_" + frontback + "_" + roundness \
+                   + "_" + centrality
+            meta.loc[d.index, name] = match.iloc[0].phonation == phonation \
+                                      and match.iloc[0].manner == manner \
+                                      and match.iloc[0].place == place \
+                                      and match.iloc[0].frontback == frontback \
+                                      and match.iloc[0].roundness == roundness \
+                                      and match.iloc[0].centrality == centrality
+            if name not in names:
+                names.append(name)
+        print(meta.loc[d.index, name])
 
     # compute word frequency and merge w/ phoneme
     meta["is_word"] = False
@@ -227,6 +274,12 @@ def _decod_one_subject(report_TG, subject, target, nb_min_task, nb_max_task, nb_
             "subject_"+ str(subject) +"_session_"+ str(session), #+"_task_"+ str(task),
                                  y_ph, X_ph, word_phoneme = "phonemes")
         return fig_evo_ph
+
+    #if target == "phonemes" :
+
+
+
+
 
 def decod_specific_label(report_TG, times, label, y, X, word_phoneme, tg_bool=True):
     score_matrix = decod(X, y, word_phoneme, label, times)

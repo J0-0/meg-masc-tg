@@ -90,7 +90,7 @@ for target in targets:
         out = _decod_one_subject(report_TG, subject, target, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses)
         if out is None :
             continue
-        report_TG.add_figure(out, subject, tags=str(target)+ " - " + str(subject))
+        report_TG.add_figure(out, subject, tags=str(target)+ "-" + str(subject))
         #report.save("decoding.html", open_browser=False, overwrite=True)
         report_TG.save("decoding_TG.html", open_browser=False, overwrite=True)
         print("done")
