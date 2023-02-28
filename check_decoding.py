@@ -68,16 +68,14 @@ def segment(raw):
     assert len(meta.wordfreq.unique()) > 2
 
     # segment
-    events = np.c_[
-        meta.onset * raw.info["sfreq"], np.ones((len(meta), 2))
-    ].astype(int)
+    events = np.c_[meta.onset * raw.info["sfreq"], np.ones((len(meta), 2))].astype(int)
 
     epochs = mne.Epochs(
         raw,
         events,
         tmin=-0.200,
         tmax=0.6,
-        decim=20, #10
+        decim=20,  # 10
         baseline=(-0.2, 0.0),
         metadata=meta,
         preload=True,
@@ -116,7 +114,7 @@ def decod(X, y, meta, times):
     # score
     out = list()
     for label, m in meta.groupby("label"):
-        Rs = correlate(y[m.index, None], preds[m.index]) # (327, 1)
+        Rs = correlate(y[m.index, None], preds[m.index])  # (327, 1)
         # print("y[m.index, None] ", y[m.index, None].shape)
         for t, r in zip(times, Rs):
             out.append(dict(score=r, time=t, label=label, n=len(m.index)))
@@ -149,6 +147,8 @@ subjects = pd.read_csv(PATHS.bids / "participants.tsv", sep="\t")
 subjects = subjects.participant_id.apply(lambda x: x.split("-")[1]).values
 
 nb_max_ses = 1
+
+
 def _get_epochs(subject):
     all_epochs = list()
     for session in range(nb_max_ses):
@@ -168,15 +168,13 @@ def _get_epochs(subject):
             except FileNotFoundError:
                 print("missing", subject, session, task)
                 continue
-            raw = raw.pick_types(
-                meg=True, misc=False, eeg=False, eog=False, ecg=False
-            )
+            raw = raw.pick_types(meg=True, misc=False, eeg=False, eog=False, ecg=False)
 
             raw.load_data().filter(0.5, 30.0, n_jobs=1)
             epochs = segment(raw)
-            epochs.metadata["half"] = np.round(
-                np.linspace(0, 1.0, len(epochs))
-            ).astype(int)
+            epochs.metadata["half"] = np.round(np.linspace(0, 1.0, len(epochs))).astype(
+                int
+            )
             epochs.metadata["task"] = task
             epochs.metadata["session"] = session
 

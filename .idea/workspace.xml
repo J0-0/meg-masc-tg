@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="044f6c23-2362-4071-8482-12cab6c487b8" name="Default Changelist" comment="compartmentalization">
+    <list default="true" id="044f6c23-2362-4071-8482-12cab6c487b8" name="Default Changelist" comment="decoding on all phonemes">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/check_decoding.py" beforeDir="false" afterPath="$PROJECT_DIR$/check_decoding.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/check_decoding_TG.py" beforeDir="false" afterPath="$PROJECT_DIR$/check_decoding_TG.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/check_decoding_time_g.py" beforeDir="false" afterPath="$PROJECT_DIR$/check_decoding_time_g.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/check_decoding_time_g_petit_prince.py" beforeDir="false" afterPath="$PROJECT_DIR$/check_decoding_time_g_petit_prince.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/decode_gen_target.py" beforeDir="false" afterPath="$PROJECT_DIR$/decode_gen_target.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/plot_score_on_freq.py" beforeDir="false" afterPath="$PROJECT_DIR$/plot_score_on_freq.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/submitit_file.py" beforeDir="false" afterPath="$PROJECT_DIR$/submitit_file.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -127,7 +132,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="plot_score_on_freq" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+    <configuration name="submitit_file" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
       <module name="meg-masc-tg" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -139,7 +144,7 @@
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/plot_score_on_freq.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/submitit_file.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -151,10 +156,10 @@
     <recent_temporary>
       <list>
         <item itemvalue="Python.main" />
+        <item itemvalue="Python.submitit_file" />
         <item itemvalue="Python.check_decoding_time_g_petit_prince" />
         <item itemvalue="Python.check_decoding_time_g" />
         <item itemvalue="Python.decode_gen_target" />
-        <item itemvalue="Python.plot_score_on_freq" />
       </list>
     </recent_temporary>
   </component>
@@ -223,7 +228,21 @@
       <option name="project" value="LOCAL" />
       <updated>1676917803287</updated>
     </task>
-    <option name="localTasksCounter" value="9" />
+    <task id="LOCAL-00009" summary="decoding on all phonemes">
+      <created>1677061849682</created>
+      <option name="number" value="00009" />
+      <option name="presentableId" value="LOCAL-00009" />
+      <option name="project" value="LOCAL" />
+      <updated>1677061849682</updated>
+    </task>
+    <task id="LOCAL-00010" summary="submitit">
+      <created>1677079873855</created>
+      <option name="number" value="00010" />
+      <option name="presentableId" value="LOCAL-00010" />
+      <option name="project" value="LOCAL" />
+      <updated>1677079873855</updated>
+    </task>
+    <option name="localTasksCounter" value="11" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -244,6 +263,8 @@
     <MESSAGE value="temporal generalization and/or plot of score on one time step with several models" />
     <MESSAGE value="temporal generalization and plot of AUC score on one time step for different sessions and different tasks" />
     <MESSAGE value="compartmentalization" />
-    <option name="LAST_COMMIT_MESSAGE" value="compartmentalization" />
+    <MESSAGE value="decoding on all phonemes" />
+    <MESSAGE value="submitit" />
+    <option name="LAST_COMMIT_MESSAGE" value="submitit" />
   </component>
 </project>

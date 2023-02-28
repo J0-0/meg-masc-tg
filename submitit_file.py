@@ -1,7 +1,9 @@
 import submitit
 
+
 def add(a, b):
     return a + b
+
 
 # the AutoExecutor class is your interface for submitting function to a cluster or run them locally.
 # The specified folder is used to dump job information, logs and result when finished
@@ -19,8 +21,9 @@ executor.update_parameters(timeout_min=4, slurm_partition="newgen")
 job = executor.submit(add, 5, 7)  # will compute add(5, 7)
 print(job.job_id)  # ID of your job
 
-output = job.result()  # waits for the submitted function to complete and returns its output
+output = (
+    job.result()
+)  # waits for the submitted function to complete and returns its output
 print(output)
 # if ever the job failed, job.result() will raise an error with the corresponding trace
 assert output == 12  # 5 + 7 = 12...  your addition was computed in the cluster
-

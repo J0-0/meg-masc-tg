@@ -60,7 +60,7 @@ def segment(raw):
     # compute word frequency and merge w/ phoneme
     meta["is_word"] = False
     words = meta.query('kind=="word"').copy()
-    assert len(words) > 10 # why ?
+    assert len(words) > 10  # why ?
     # assert np.all(meta.loc[words.index + 1, "kind"] == "phoneme")
     meta.loc[words.index + 1, "is_word"] = True
     wfreq = lambda x: zipf_frequency(x, "en")  # noqa
@@ -71,7 +71,7 @@ def segment(raw):
 
     # segment
     events = np.c_[
-        meta.onset * raw.info["sfreq"], np.ones((len(meta), 2)) # what is sfreq ?
+        meta.onset * raw.info["sfreq"], np.ones((len(meta), 2))  # what is sfreq ?
     ].astype(int)
 
     epochs = mne.Epochs(
@@ -79,7 +79,7 @@ def segment(raw):
         events,
         tmin=-0.200,
         tmax=0.6,
-        decim=20, #10
+        decim=20,  # 10
         baseline=(-0.2, 0.0),
         metadata=meta,
         preload=True,
@@ -97,7 +97,7 @@ def segment(raw):
 
 
 def decod(X, y, meta, times, word_phoneme):
-    assert len(X) == len(y) == len(meta) # what is in meta ?
+    assert len(X) == len(y) == len(meta)  # what is in meta ?
     meta = meta.reset_index()
     if word_phoneme == "words":
         y = scale(y[:, None])[:, 0]
@@ -107,28 +107,33 @@ def decod(X, y, meta, times, word_phoneme):
 
     #### define data
 
+
 def cross_val_score(X, y):  # for each session, subject, h0/h1, etc. (m.label, roc_auc)
-    model = make_pipeline(StandardScaler(), LinearDiscriminantAnalysis()) # potentiellement changer LDA en quelque chose SVM etc.
+    model = make_pipeline(
+        StandardScaler(), LinearDiscriminantAnalysis()
+    )  # potentiellement changer LDA en quelque chose SVM etc.
 
     # fit predict
-    n, nchans, ntimes = X.shape # what is n and ntimes ?
+    n, nchans, ntimes = X.shape  # what is n and ntimes ?
     # 27 English speakers who listened to 2 sessions of 1h of naturalistic stories
     # words: n, nchans, ntimes = 668 208 41 (n: nb of words ?)
     # phonemes: n, nchans, ntimes = 1794 208 41
     scores = np.zeros((ntimes, ntimes))
-    cv = KFold(n_splits=5, shuffle=True, random_state = 0)
+    cv = KFold(n_splits=5, shuffle=True, random_state=0)
 
     for split, (train, test) in enumerate(cv.split(X)):
         for t1 in trange(ntimes):
-            model.fit(X[train, :, t1], y[train]) # n_trial -> chaque phoneme/word
+            model.fit(X[train, :, t1], y[train])  # n_trial -> chaque phoneme/word
             # is n every phoneme/word in chronological order ?
             # is it better to mix the training and testing data for this dataset or not ?
             # yes for homogeneisation but careful for independance too
             # -> cv qui pred des segments d'une dizaine de secondes pour ne pas avoir d'élements trop proches
             for t2 in trange(ntimes):
                 y_preds = model.predict_proba(X[test, :, t2])[:, 1]
-                #score = correlate(y[test].astype(float), y_preds)
-                score = sklearn.metrics.roc_auc_score(y[test], y_preds) # best for classification
+                # score = correlate(y[test].astype(float), y_preds)
+                score = sklearn.metrics.roc_auc_score(
+                    y[test], y_preds
+                )  # best for classification
                 scores[split, t1, t2] = score
     return scores.mean(0)
     # on s'attend à ce que le score de decodabilité augmente une fois le mot/phonème entendu
@@ -161,28 +166,57 @@ def cross_val_score(X, y):  # for each session, subject, h0/h1, etc. (m.label, r
 
     # plot figure
     for label, m in meta.groupby("label"):
-        df_scores_TG_reduced = df_scores_TG[df_scores_TG["label"].isin([label])] # dataframe[dataframe['Stream'].isin(options)]
+        df_scores_TG_reduced = df_scores_TG[
+            df_scores_TG["label"].isin([label])
+        ]  # dataframe[dataframe['Stream'].isin(options)]
         eg_matrix = np.zeros((ntimes, ntimes))
         t2_int_list = [t2_int for t2_int in trange(ntimes)]
         for t1 in trange(ntimes):
             for t2, t2_int in zip(times, t2_int_list):
-                df_scores_TG_reduced_t1 = df_scores_TG_reduced[df_scores_TG_reduced["time_1"] == t1]
-                df_scores_TG_reduced_t2 = df_scores_TG_reduced_t1[df_scores_TG_reduced_t1["time_2"] == t2_int]
-                eg_matrix[t1, t2_int] = df_scores_TG_reduced_t2.iloc[:]["score"].astype(float)
+                df_scores_TG_reduced_t1 = df_scores_TG_reduced[
+                    df_scores_TG_reduced["time_1"] == t1
+                ]
+                df_scores_TG_reduced_t2 = df_scores_TG_reduced_t1[
+                    df_scores_TG_reduced_t1["time_2"] == t2_int
+                ]
+                eg_matrix[t1, t2_int] = df_scores_TG_reduced_t2.iloc[:]["score"].astype(
+                    float
+                )
         fig, ax = plt.subplots(1, 1)
-        im = ax.imshow(eg_matrix, interpolation='lanczos', origin='lower', cmap='RdBu_r', vmin=0., vmax=1.)
-        ax.set_xlabel('Testing Time (s)')
-        ax.set_ylabel('Training Time (s)')
-        ax.set_title('Temporal generalization')
-        ax.axvline(0, color='k')
-        ax.axhline(0, color='k')
-        plt.xticks([i for n,i in enumerate(t2_int_list) if n%5 == 0], [i for n,i in enumerate(times) if n%5 == 0])
-        plt.yticks([i for n,i in enumerate(t2_int_list) if n%5 == 0], [i for n,i in enumerate(times) if n%5 == 0])
+        im = ax.imshow(
+            eg_matrix,
+            interpolation="lanczos",
+            origin="lower",
+            cmap="RdBu_r",
+            vmin=0.0,
+            vmax=1.0,
+        )
+        ax.set_xlabel("Testing Time (s)")
+        ax.set_ylabel("Training Time (s)")
+        ax.set_title("Temporal generalization")
+        ax.axvline(0, color="k")
+        ax.axhline(0, color="k")
+        plt.xticks(
+            [i for n, i in enumerate(t2_int_list) if n % 5 == 0],
+            [i for n, i in enumerate(times) if n % 5 == 0],
+        )
+        plt.yticks(
+            [i for n, i in enumerate(t2_int_list) if n % 5 == 0],
+            [i for n, i in enumerate(times) if n % 5 == 0],
+        )
         cbar = plt.colorbar(im, ax=ax)
-        cbar.set_label('R score')
+        cbar.set_label("R score")
         time_inst = time.time()
-        plt.savefig("/Users/Josephine/Desktop/tg_figures/figure_plot_" + word_phoneme + "_" + label + "_" + str(time_inst)[-4:]+".png")
-        report_TG.add_figure(fig, label, tags= word_phoneme)
+        plt.savefig(
+            "/Users/Josephine/Desktop/tg_figures/figure_plot_"
+            + word_phoneme
+            + "_"
+            + label
+            + "_"
+            + str(time_inst)[-4:]
+            + ".png"
+        )
+        report_TG.add_figure(fig, label, tags=word_phoneme)
 
     return pd.DataFrame(out)
 
@@ -212,7 +246,7 @@ def plot(result):
     return fig
 
 
-ph_info = pd.read_csv("phoneme_info.csv") # phonation: "v", "uv", what do these mean ?
+ph_info = pd.read_csv("phoneme_info.csv")  # phonation: "v", "uv", what do these mean ?
 subjects = pd.read_csv(PATHS.bids / "participants.tsv", sep="\t")
 subjects = subjects.participant_id.apply(lambda x: x.split("-")[1]).values
 
@@ -220,6 +254,8 @@ nb_min_ses = 0
 nb_min_task = 0
 nb_max_ses = 1
 nb_max_task = 1
+
+
 def _get_epochs(subject):
     all_epochs = list()
     for session in range(nb_min_ses, nb_max_ses):
@@ -245,9 +281,9 @@ def _get_epochs(subject):
 
             raw.load_data().filter(0.5, 30.0, n_jobs=1)
             epochs = segment(raw)
-            epochs.metadata["half"] = np.round(
-                np.linspace(0, 1.0, len(epochs))
-            ).astype(int)
+            epochs.metadata["half"] = np.round(np.linspace(0, 1.0, len(epochs))).astype(
+                int
+            )
             epochs.metadata["task"] = task
             epochs.metadata["session"] = session
 
