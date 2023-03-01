@@ -13,7 +13,7 @@ from sklearn.model_selection import GroupKFold
 import pandas as pd
 from decode_gen_target import PATHS
 from decode_gen_target import _decod_one_subject, correlate, _get_epochs
-from scipy.ndimage.interpolation import shift
+#from scipy.ndimage.interpolation import shift
 
 
 ### constants ###
@@ -27,6 +27,11 @@ nb_min_task = 0
 nb_max_task = 4  # 4
 ###
 
+def list_subjects():
+    subjects = pd.read_csv(PATHS.bids / "participants0.tsv", sep="\t")
+    subjects = subjects.participant_id.apply(lambda x: x.split("-")[1]).values
+    return subjects
+
 def setup_model(objective="regression"):
     if objective == "regression":
         alphas = np.logspace(-4, 4, 10)
@@ -37,12 +42,6 @@ def setup_model(objective="regression"):
         model = RidgeClassifierCV(alphas)
         scoring = roc_auc_score
     return model, scoring
-
-
-def list_subjects():
-    subjects = pd.read_csv(PATHS.bids / "participants.tsv", sep="\t")
-    subjects = subjects.participant_id.apply(lambda x: x.split("-")[1]).values
-    return subjects
 
 
 def decode(epochs, target):  # To reproduce figure from Gwillimas and al, Nature 2022.
@@ -75,25 +74,34 @@ def decode(epochs, target):  # To reproduce figure from Gwillimas and al, Nature
 
 # report = mne.Report()
 report_TG = mne.Report()
-subjects = list_subjects()
+#subjects = list_subjects()
+subjects = ["02"]
 ph_info = pd.read_csv(
     "phoneme_info.csv"
 )  # phonation: "v", "uv", what do these mean ? (voiced ? as in ~ vowel)
-targets = ["vowels", "words"] #"phonemes",
+targets = ["vowels"] #"phonemes", "words"
 reg_classif = "regression"
 model0, score_fct = setup_model(objective=reg_classif)
 
-for subject in subjects:
-    print("subject " + subject)
-    epochs = _get_epochs(subject, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses)
+#for subject in subjects:
+    #print("subject " + subject)
+
+group_of_subjects = [["01"]] #[["01"], ["02"], ["04"], ["01", "02", "04"],  ["05"]]
+for subjects in group_of_subjects:
+    subject_str = ""
+    for subject in subjects:
+        subject_str = subject_str+ subject + "_"
+    print(subject_str)
+    # subject_str = subjects[0] #"01-04"
+    epochs = _get_epochs(subjects, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses)
     for target in targets:
         out = _decod_one_subject(
-            report_TG, subject, target, epochs, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses,
+            report_TG, subject_str, target, epochs, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses,
             model0=model0, score_fct=score_fct, bool_several_shadow = True
         )
         if out is None:
             continue
-        report_TG.add_figure(out, subject, tags=str(target) + "-" + str(subject))
+        report_TG.add_figure(out, subject_str, tags=str(target) + "-" + str(subject_str))
         # report.save("decoding.html", open_browser=False, overwrite=True)
-        report_TG.save("decoding_TG_shift_"+reg_classif+".html", open_browser=False, overwrite=True)
-    print("done for subject " + subject)
+        report_TG.save("decoding_TG_rainbow_s"+ subject_str +"wo_baseline__"+reg_classif+".html", open_browser=False, overwrite=True)
+    print("done for subject " + subject_str)

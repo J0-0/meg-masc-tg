@@ -16,7 +16,7 @@ from pathlib import Path
 import matplotlib
 import time
 from sklearn.metrics import roc_auc_score
-from scipy.ndimage.interpolation import shift
+#from scipy.ndimage.interpolation import shift
 
 
 matplotlib.use("Agg")
@@ -194,8 +194,9 @@ def segment(raw, nb_min_task, nb_max_task, regression_phonemes = False):
         events,
         tmin=-0.200,
         tmax=0.6,
-        decim= 40, #20, # 20 #10 #matrices de 20x20 pixels
-        baseline=(-0.2, 0.0),
+        decim= 60, #20, # 20 #10 #matrices de 20x20 pixels
+        #baseline=(-0.2, 0.0),
+        baseline=None,
         metadata=meta,
         preload=True,
         event_repeated="drop",
@@ -204,11 +205,10 @@ def segment(raw, nb_min_task, nb_max_task, regression_phonemes = False):
     # threshold
     th = np.percentile(np.abs(epochs._data), 95)
     epochs._data[:] = np.clip(epochs._data, -th, th)
-    epochs.apply_baseline((-0.2, 0.0))
-    th = np.percentile(np.abs(epochs._data), 95)
-    epochs._data[:] = np.clip(epochs._data, -th, th)
-    epochs.apply_baseline((-0.2, 0.0))
-    # print("list_freqs =",list_freqs)
+    #epochs.apply_baseline((-0.2, 0.0))
+    # th = np.percentile(np.abs(epochs._data), 95)
+    # epochs._data[:] = np.clip(epochs._data, -th, th)
+    # epochs.apply_baseline((-0.2, 0.0))
     return epochs
 
 def correlate(X, Y):
@@ -233,41 +233,42 @@ def plot(result):
     ax.axhline(0, color="k")
     return fig
 
-def _get_epochs(subject, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses):
+def _get_epochs(subjects, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses):
     all_epochs = list()
-    for session in range(nb_min_ses, nb_max_ses):
-        print("session ", session)
+    for subject in subjects:
+        print("subject " + subject)
+        for session in range(nb_min_ses, nb_max_ses):
+            print("session ", session)
+            for task in range(nb_min_task, nb_max_task):
+                print("task ", task)
+                print(".", end="")
+                bids_path = mne_bids.BIDSPath(
+                    subject=subject,
+                    session=str(session),
+                    task=str(task),
+                    datatype="meg",
+                    root=PATHS.bids,
+                )
+                try:
+                    raw = mne_bids.read_raw_bids(bids_path)
+                except FileNotFoundError:
+                    print("missing", subject, session, task)
+                    continue
+                raw = raw.pick_types(
+                    meg=True, stim=False, misc=False, eeg=False, eog=False, ecg=False
+                )
 
-        for task in range(nb_min_task, nb_max_task):
-            print("task ", task)
-            print(".", end="")
-            bids_path = mne_bids.BIDSPath(
-                subject=subject,
-                session=str(session),
-                task=str(task),
-                datatype="meg",
-                root=PATHS.bids,
-            )
-            try:
-                raw = mne_bids.read_raw_bids(bids_path)
-            except FileNotFoundError:
-                print("missing", subject, session, task)
-                continue
-            raw = raw.pick_types(
-                meg=True, stim=False, misc=False, eeg=False, eog=False, ecg=False
-            )
-
-            raw.load_data().filter(0.5, 30.0, n_jobs=1)
-            epochs = segment(raw, nb_min_task, nb_max_task)
-            epochs.metadata["half"] = np.round(np.linspace(0, 1.0, len(epochs))).astype(
-                int
-            )
-            epochs.metadata["task"] = task
-            epochs.metadata["session"] = session
-            # epochs.metadata["is_session_0"] = True
-            epochs.metadata["is_session_" + str(session)] = True
-            epochs.metadata["is_task_" + str(task)] = True
-            all_epochs.append(epochs)
+                raw.load_data().filter(0.5, 30.0, n_jobs=1)
+                epochs = segment(raw, nb_min_task, nb_max_task)
+                epochs.metadata["half"] = np.round(np.linspace(0, 1.0, len(epochs))).astype(
+                    int
+                )
+                epochs.metadata["task"] = task
+                epochs.metadata["session"] = session
+                # epochs.metadata["is_session_0"] = True
+                epochs.metadata["is_session_" + str(session)] = True
+                epochs.metadata["is_task_" + str(task)] = True
+                all_epochs.append(epochs)
 
     if not len(all_epochs):
         return
@@ -482,9 +483,10 @@ def cross_val_score(groups, X, y, label, times, model0=LinearDiscriminantAnalysi
             for n_shift, shift in enumerate(range(further_before, further_after)) :  # (-4, 5)
                 # y_ = shift_homade(y, shift, fill_value='nan')
                 for t1 in trange(ntimes):
-                    model.fit(
-                        shift_X(X[train, :, t1], shift), shift_y(y[train].astype(float), shift)
-                    )
+                    # model.fit(
+                    #     shift_X(X[train, :, t1], shift), shift_y(y[train].astype(float), shift)
+                    # )
+                    model.fit(X[train, :, t1], y[train].astype(float))
                     # print("X[train, :, t1] ", X[train, :, t1])
                     # print("shift_X(X[train, :, t1], shift)", shift, shift_X(X[train, :, t1], shift))
                     #

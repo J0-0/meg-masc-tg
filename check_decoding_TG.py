@@ -89,10 +89,10 @@ def segment(raw):
     # threshold # what is this threshold for ?
     th = np.percentile(np.abs(epochs._data), 95)
     epochs._data[:] = np.clip(epochs._data, -th, th)
-    epochs.apply_baseline()
+    #epochs.apply_baseline()
     th = np.percentile(np.abs(epochs._data), 95)
     epochs._data[:] = np.clip(epochs._data, -th, th)
-    epochs.apply_baseline()
+    #epochs.apply_baseline()
     return epochs
 
 
