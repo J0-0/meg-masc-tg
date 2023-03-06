@@ -29,7 +29,7 @@ names = ['v_v_lo_b_u_c', 'v_v_lo_f_u_f', 'v_v_m_b_r_f', 'v_v_m_f_u_f', 'v_o_l_f_
           'v_a_v_b_u_n', 'uv_o_c_f_u_n', 'v_a_l_f_r_n'] # all categories of phonemes (24)
 
 name_data = "bids_anonym"
-further_before, further_after = -2, 4
+further_before, further_after = -1, 3
 n_sim_shadows = further_after - further_before
 
 # name_data = "le_petit_prince"
@@ -129,6 +129,12 @@ def segment(raw, nb_min_task, nb_max_task, regression_phonemes = False):
         match = ph_info.query("phoneme==@ph")
         assert len(match) == 1
         meta.loc[d.index, "voiced"] = match.iloc[0].phonation == "v"
+        meta.loc[d.index, "fricative"] = match.iloc[0].manner == "f"
+        meta.loc[d.index, "front"] = match.iloc[0].frontback == "f"
+        meta.loc[d.index, "round"] = match.iloc[0].roundness == "r"
+        # meta.loc[d.index, "central"] = match.iloc[0].centrality == "c"
+
+
         # list_els_ph = []
         # for (n, key_item), value in zip(enumerate(match.iloc[0].keys()), d_phonemes.values()):
         #     element= match.iloc[0][n+1]
@@ -194,7 +200,7 @@ def segment(raw, nb_min_task, nb_max_task, regression_phonemes = False):
         events,
         tmin=-0.200,
         tmax=0.6,
-        decim= 60, #20, # 20 #10 #matrices de 20x20 pixels
+        decim= 60, #60, #20, # 20 #10 #matrices de 20x20 pixels
         #baseline=(-0.2, 0.0),
         baseline=None,
         metadata=meta,
@@ -287,7 +293,8 @@ def _get_epochs(subjects, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses):
 
 
 def _decod_one_subject(
-    report_TG, subject, target, epochs, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses, model0, score_fct, bool_several_shadow = True):
+    report_TG, subject, target, epochs, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses, model0, score_fct,
+        bool_several_shadow = True, feature = "voiced"):
     #epochs = _get_epochs(subject, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses)
     if epochs is None:
         return
@@ -302,7 +309,7 @@ def _decod_one_subject(
         X_words = words.get_data() * 1e13
         evo = words.average()
         fig_evo = evo.plot(spatial_colors=True, show=False)
-        y_words = words.metadata.shift(1).wordfreq.values
+        y_words = words.metadata.wordfreq.values #shift(1)
         decod_specific_label(
             groups,
             report_TG,
@@ -324,7 +331,13 @@ def _decod_one_subject(
         evo_ph = phonemes.average()
         fig_evo_ph = evo_ph.plot(spatial_colors=True, show=False)
         X_ph = phonemes.get_data() * 1e13
-        y_ph = phonemes.metadata["voiced"].values
+        # y_ph0 = np.array([phonemes.metadata["voiced"].values, phonemes.metadata["fricative"].values,
+        #                  phonemes.metadata["front"].values, phonemes.metadata["round"].values])
+        #y_ph0 = np.array([phonemes.metadata[feature].values])
+        y_ph0 = np.array([phonemes.metadata["voiced"].values, phonemes.metadata["fricative"].values])
+        y_ph = y_ph0.reshape(y_ph0.shape[1], y_ph0.shape[0])
+        #y_ph = list(y_ph0.reshape(y_ph0.shape[1], y_ph0.shape[0]))
+        #print(" y_ph.shape ", len(y_ph), len(phonemes.metadata["voiced"].values))
         # X_freq = phonemes.metadata["frequency"].values
         decod_specific_label(
             groups,
@@ -381,15 +394,14 @@ def decod_specific_label(groups, report_TG, times, label, y, X, model0, score_fc
         if tg_bool == True:
             for n_shift, shift in enumerate(range(further_before, further_after)):  # (-4, 5)
                 label_shift = label + " - shift = " +str(shift)
-                print("decod_specific_label scores_shift_mean ", scores_shift_mean)
                 score_matrix = scores_shift_mean[n_shift, :, :]
-                print("score_matrix =", shift, score_matrix )
                 # score_matrix in score_matrices:
                 fig_each_ses_task_subject = plot_TG_matrix(
                     times, score_matrix, score_fct
                 )
                 report_TG.add_figure(fig_each_ses_task_subject, label_shift, tags=word_phoneme)
                 report_TG.save("decoding_TG.html", open_browser=False, overwrite=True)
+                print("done with shift ", shift)
         return score_matrix
     else:
         score_matrix = decod(groups, X, y, word_phoneme, label, times, model0=model0, score_fct=score_fct,
@@ -410,13 +422,13 @@ def decod(groups, X, y, word_phoneme, label, times, model0, score_fct, bool_seve
             y = y > np.nanmedian(y)
     if bool_several_shadow == True :
         score_means = cross_val_score(
-            groups, X, y, label, times, model0=model0, score_fct=score_fct)
-        print("decod score_means =", score_means)
+            groups, X, y, label, times, word_phoneme, model0=model0, score_fct=score_fct)
+        #print("decod score_means =", score_means)
         return score_means
     else:
         score_mean = cross_val_score(
-            groups, X, y, label, times, model0=model0, score_fct=score_fct, bool_several_shadow = bool_several_shadow)
-        print("score_mean =", score_mean)
+            groups, X, y, label, times, word_phoneme, model0=model0, score_fct=score_fct, bool_several_shadow = bool_several_shadow)
+        #print("score_mean =", score_mean)
         return score_mean
 
 
@@ -457,7 +469,7 @@ def modify_y_preds(y_preds, num):
     if num > 0 :
         y_preds_new = y_preds[num]
 
-def cross_val_score(groups, X, y, label, times, model0=LinearDiscriminantAnalysis(), score_fct=roc_auc_score,
+def cross_val_score(groups, X, y, label, times, word_phoneme, model0=LinearDiscriminantAnalysis(), score_fct=roc_auc_score,
                     bool_several_shadow = True, score_t1_bool=True, tg_bool=True):
     model = make_pipeline(StandardScaler(), model0) #LogisticRegression()
     # fit predict
@@ -481,15 +493,16 @@ def cross_val_score(groups, X, y, label, times, model0=LinearDiscriminantAnalysi
         for split, (train, test) in enumerate(cv.split(X, groups=groups)):
             # shadowing on several phonemes
             for n_shift, shift in enumerate(range(further_before, further_after)) :  # (-4, 5)
-                # y_ = shift_homade(y, shift, fill_value='nan')
                 for t1 in trange(ntimes):
                     # model.fit(
                     #     shift_X(X[train, :, t1], shift), shift_y(y[train].astype(float), shift)
                     # )
-                    model.fit(X[train, :, t1], y[train].astype(float))
+                    if word_phoneme == "words":
+                        model.fit(X[train, :, t1], y[train].astype(float)) # à sortir de la boucle, pas optimal comme ça
+                    else:
+                        model.fit(X[train, :, t1], y[train, :].astype(float))
                     # print("X[train, :, t1] ", X[train, :, t1])
                     # print("shift_X(X[train, :, t1], shift)", shift, shift_X(X[train, :, t1], shift))
-                    #
                     # print("y[train].astype(float) ", y[train].astype(float))
                     # print("shift_y(y[train].astype(float), shift)", shift, shift_y(y[train].astype(float), shift))
 
@@ -501,13 +514,16 @@ def cross_val_score(groups, X, y, label, times, model0=LinearDiscriminantAnalysi
                                 # y_preds = model.predict_proba(X[test, :, t1])[:, 1] (for LDA classifier)
                             else :
                                 y_preds = model.predict(shift_X(X[test, :, t2], shift))
-                            score = score_fct(shift_y(y[test].astype(float), shift), y_preds)
+                            scores = score_fct(shift_y(y[test].astype(float), shift), y_preds) # for multi-regression
+                            #print("scores =", scores)
+                            score = np.mean(scores)
+                            #print("score =", score)
                             scores_shift[split, n_shift, t1, t2] = score
     else:
         for split, (train, test) in enumerate(cv.split(X, groups=groups)):
             for t1 in trange(ntimes):
                 model.fit(
-                    X[train, :, t1], y[train].astype(float)
+                    X[train, :, t1], y[train, :].astype(float)
                 )
                 if score_t1_bool == True:
                     if score_fct is roc_auc_score: # classifier used
@@ -527,20 +543,14 @@ def cross_val_score(groups, X, y, label, times, model0=LinearDiscriminantAnalysi
                             #y_preds = model.predict_proba(X[test, :, t1])[:, 1] (for LDA classifier)
                         else :
                             y_preds = model.predict(X[test, :, t2])
-                        score = score_fct(y[test].astype(float), y_preds)  # best for classification (not for regression)
+                        score = score_fct(y[test].astype(float), y_preds)
                         scores[split, t1, t2] = score
-    #if score_t1_bool == True:
-        #score_t1_mean = score_t1_cv.mean(0)
-    # return score_t1_mean
     if bool_several_shadow == True:
-        print("scores_shift =", scores_shift[0].shape, scores_shift[0])
         scores_shift_mean = np.nanmean(scores_shift, 0)
-        print("scores_shift_mean =", scores_shift_mean.shape, scores_shift_mean)
         return scores_shift_mean
     else:
         scores_mean = scores.mean(0)
         return scores_mean
-    # on s'attend à ce que le score de decodabilité augmente une fois le mot/phonème entendu
 
 
 def plot_TG_matrix(

@@ -79,14 +79,13 @@ subjects = ["02"]
 ph_info = pd.read_csv(
     "phoneme_info.csv"
 )  # phonation: "v", "uv", what do these mean ? (voiced ? as in ~ vowel)
-targets = ["vowels"] #"phonemes", "words"
+targets = ["words", "vowels"] #, "phonemes"
 reg_classif = "regression"
 model0, score_fct = setup_model(objective=reg_classif)
-
 #for subject in subjects:
     #print("subject " + subject)
-
-group_of_subjects = [["01"]] #[["01"], ["02"], ["04"], ["01", "02", "04"],  ["05"]]
+group_of_subjects = [["01"], ["05"], ["01", "05"], ["01", "04", "05"]] #[["01", "04", "05"], ["01", "05", "06"], ["04"], ["05"], ["06"], ["01"], ["02"]]
+features = ["voiced", "fricative"]
 for subjects in group_of_subjects:
     subject_str = ""
     for subject in subjects:
@@ -94,14 +93,15 @@ for subjects in group_of_subjects:
     print(subject_str)
     # subject_str = subjects[0] #"01-04"
     epochs = _get_epochs(subjects, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses)
+    print("epochs done")
     for target in targets:
+        #for feature_i in features:
         out = _decod_one_subject(
             report_TG, subject_str, target, epochs, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses,
-            model0=model0, score_fct=score_fct, bool_several_shadow = True
-        )
+            model0=model0, score_fct=score_fct, bool_several_shadow = True) #, feature = feature_i
         if out is None:
             continue
         report_TG.add_figure(out, subject_str, tags=str(target) + "-" + str(subject_str))
         # report.save("decoding.html", open_browser=False, overwrite=True)
-        report_TG.save("decoding_TG_rainbow_s"+ subject_str +"wo_baseline__"+reg_classif+".html", open_browser=False, overwrite=True)
+        report_TG.save("decoding_TG_rainbow_s"+ subject_str +"wo_b_2features_ph_words_" +"_"+reg_classif+".html", open_browser=False, overwrite=True)
     print("done for subject " + subject_str)
