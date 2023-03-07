@@ -31,14 +31,7 @@ names = ['v_v_lo_b_u_c', 'v_v_lo_f_u_f', 'v_v_m_b_r_f', 'v_v_m_f_u_f', 'v_o_l_f_
 name_data = "bids_anonym"
 further_before, further_after = -1, 3
 n_sim_shadows = further_after - further_before
-
 # name_data = "le_petit_prince"
-
-# nb_min_ses = 0
-# nb_max_ses = 2
-#
-# nb_min_task = 0
-# nb_max_task = 4
 ###
 
 
@@ -58,7 +51,7 @@ class PATHS:
 def segment(raw, nb_min_task, nb_max_task, regression_phonemes = False):
     ph_info = pd.read_csv(
         "phoneme_info.csv"
-    )  # phonation: "v", "uv", what do these mean ? (voiced ? as in ~ vowel)
+    )
     list_freqs = []
     # preproc annotations
     meta = list()
@@ -78,14 +71,6 @@ def segment(raw, nb_min_task, nb_max_task, regression_phonemes = False):
     # compute voicing
     phonemes = meta.query('kind=="phoneme"')
     assert len(phonemes)
-    # d_phonemes = {}
-    # d_phonemes["phonation"] = []
-    # d_phonemes["manner"] = []
-    # d_phonemes["place"] = []
-    # d_phonemes["frontback"] = []
-    # d_phonemes["roundness"] = []
-    # d_phonemes["centrality"] = []
-    # all_elements_phonemes = []
     if regression_phonemes == True:
         all_elements_phonemes = [
             ["v", "v", "lo", "b", "u", "c"],
@@ -134,7 +119,6 @@ def segment(raw, nb_min_task, nb_max_task, regression_phonemes = False):
         meta.loc[d.index, "round"] = match.iloc[0].roundness == "r"
         # meta.loc[d.index, "central"] = match.iloc[0].centrality == "c"
 
-
         # list_els_ph = []
         # for (n, key_item), value in zip(enumerate(match.iloc[0].keys()), d_phonemes.values()):
         #     element= match.iloc[0][n+1]
@@ -179,7 +163,6 @@ def segment(raw, nb_min_task, nb_max_task, regression_phonemes = False):
                     meta.loc[d.index, "name"] = num_cat+1
                 if name not in names:
                     names.append(name)
-            # print(meta.loc[d.index, name])
 
     # compute word frequency and merge w/ phoneme
     meta["is_word"] = False
@@ -201,8 +184,7 @@ def segment(raw, nb_min_task, nb_max_task, regression_phonemes = False):
         tmin=-0.200,
         tmax=0.6,
         decim= 60, #60, #20, # 20 #10 #matrices de 20x20 pixels
-        #baseline=(-0.2, 0.0),
-        baseline=None,
+        baseline=None, # baseline= (-0.2, 0.0),
         metadata=meta,
         preload=True,
         event_repeated="drop",
@@ -212,9 +194,6 @@ def segment(raw, nb_min_task, nb_max_task, regression_phonemes = False):
     th = np.percentile(np.abs(epochs._data), 95)
     epochs._data[:] = np.clip(epochs._data, -th, th)
     #epochs.apply_baseline((-0.2, 0.0))
-    # th = np.percentile(np.abs(epochs._data), 95)
-    # epochs._data[:] = np.clip(epochs._data, -th, th)
-    # epochs.apply_baseline((-0.2, 0.0))
     return epochs
 
 def correlate(X, Y):
@@ -295,7 +274,6 @@ def _get_epochs(subjects, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses):
 def _decod_one_subject(
     report_TG, subject, target, epochs, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses, model0, score_fct,
         bool_several_shadow = True, feature = "voiced"):
-    #epochs = _get_epochs(subject, nb_min_task, nb_max_task, nb_min_ses, nb_max_ses)
     if epochs is None:
         return
     if target == "words":
@@ -303,7 +281,6 @@ def _decod_one_subject(
         groups = words.metadata.sequence_id
         print("groups =", groups)
         #for session in range(nb_min_ses, nb_max_ses):#
-        #print("session = ", session, target)#
         #words_ses = words0["is_session_" + str(session)] #
         #words = words_ses
         X_words = words.get_data() * 1e13
@@ -331,13 +308,11 @@ def _decod_one_subject(
         evo_ph = phonemes.average()
         fig_evo_ph = evo_ph.plot(spatial_colors=True, show=False)
         X_ph = phonemes.get_data() * 1e13
+        #y_ph0 = np.array([phonemes.metadata[feature].values])
         # y_ph0 = np.array([phonemes.metadata["voiced"].values, phonemes.metadata["fricative"].values,
         #                  phonemes.metadata["front"].values, phonemes.metadata["round"].values])
-        #y_ph0 = np.array([phonemes.metadata[feature].values])
         y_ph0 = np.array([phonemes.metadata["voiced"].values, phonemes.metadata["fricative"].values])
         y_ph = y_ph0.reshape(y_ph0.shape[1], y_ph0.shape[0])
-        #y_ph = list(y_ph0.reshape(y_ph0.shape[1], y_ph0.shape[0]))
-        #print(" y_ph.shape ", len(y_ph), len(phonemes.metadata["voiced"].values))
         # X_freq = phonemes.metadata["frequency"].values
         decod_specific_label(
             groups,
@@ -423,12 +398,10 @@ def decod(groups, X, y, word_phoneme, label, times, model0, score_fct, bool_seve
     if bool_several_shadow == True :
         score_means = cross_val_score(
             groups, X, y, label, times, word_phoneme, model0=model0, score_fct=score_fct)
-        #print("decod score_means =", score_means)
         return score_means
     else:
         score_mean = cross_val_score(
             groups, X, y, label, times, word_phoneme, model0=model0, score_fct=score_fct, bool_several_shadow = bool_several_shadow)
-        #print("score_mean =", score_mean)
         return score_mean
 
 
@@ -498,13 +471,9 @@ def cross_val_score(groups, X, y, label, times, word_phoneme, model0=LinearDiscr
                     #     shift_X(X[train, :, t1], shift), shift_y(y[train].astype(float), shift)
                     # )
                     if word_phoneme == "words":
-                        model.fit(X[train, :, t1], y[train].astype(float)) # à sortir de la boucle, pas optimal comme ça
+                        model.fit(X[train, :, t1], y[train].astype(float))       # pas optimal, à sortir de la boucle
                     else:
                         model.fit(X[train, :, t1], y[train, :].astype(float))
-                    # print("X[train, :, t1] ", X[train, :, t1])
-                    # print("shift_X(X[train, :, t1], shift)", shift, shift_X(X[train, :, t1], shift))
-                    # print("y[train].astype(float) ", y[train].astype(float))
-                    # print("shift_y(y[train].astype(float), shift)", shift, shift_y(y[train].astype(float), shift))
 
                     for t2 in trange(ntimes):
                         if tg_bool == True :
@@ -515,9 +484,7 @@ def cross_val_score(groups, X, y, label, times, word_phoneme, model0=LinearDiscr
                             else :
                                 y_preds = model.predict(shift_X(X[test, :, t2], shift))
                             scores = score_fct(shift_y(y[test].astype(float), shift), y_preds) # for multi-regression
-                            #print("scores =", scores)
                             score = np.mean(scores)
-                            #print("score =", score)
                             scores_shift[split, n_shift, t1, t2] = score
     else:
         for split, (train, test) in enumerate(cv.split(X, groups=groups)):
@@ -589,36 +556,4 @@ def plot_TG_matrix(
         cbar.set_label("ROC AUC")
     else:
         cbar.set_label("R score")
-    # cbar.set_label("R score")
-    time_inst = time.time()
-    # plt.savefig(root + "_" + label + "_" + str(time_inst)[-4 :] + ".png")
     return fig
-
-
-"""
-if __name__ == "__main__" :
-    report = mne.Report()
-    report_TG = mne.Report()
-
-    ph_info = pd.read_csv("phoneme_info.csv")  # phonation: "v", "uv", what do these mean ? (voiced ? as in ~ vowel)
-    subjects = pd.read_csv(PATHS.bids / "participants.tsv", sep="\t")
-    subjects = subjects.participant_id.apply(lambda x : x.split("-")[1]).values
-    # decoding
-    targets = ["words", "vowels"]
-    for target in targets:
-        for subject in subjects:
-            print(subject)
-            out = _decod_one_subject(subject, target)
-            if out is None :
-                continue
-            (
-                fig_evo,
-                fig_evo_ph,
-            ) = out
-
-            report_TG.add_figure(fig_evo, subject, tags="evo_word")
-            report_TG.add_figure(fig_evo_ph, subject, tags="evo_phoneme")
-            report.save("decoding.html", open_browser=False, overwrite=True)
-            report_TG.save("decoding_TG.html", open_browser=False, overwrite=True)
-            print("done")
-"""
